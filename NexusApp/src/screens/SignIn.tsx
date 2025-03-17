@@ -10,6 +10,9 @@ import {
 import Title from '../common/Title';
 import Input from '../common/Input';
 import Button from '../common/Button';
+import api from '../core/api';
+import utils from '../core/utils';
+import useGlobal from '../core/global';
 
 interface SignInProps {
   navigation: any;
@@ -22,6 +25,8 @@ const SignInScreen = ({ navigation }: SignInProps) => {
 
   const [usernameError, setUsernameError] = useState('')
   const [passwordError, setPasswordError] = useState('')
+
+  const login = useGlobal(state => state.login)
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -46,13 +51,37 @@ const SignInScreen = ({ navigation }: SignInProps) => {
     if (!username || !password) return
 
     // Make signin request
-
     // ...
+
+    api({
+      method: 'POST',
+      url: '/auth/login',
+      data: {
+        username,
+        password
+      }
+    })
+      .then(response => {
+        utils.log('login: ', response.data)
+        login(response.data.user, {username, password})
+      })
+      .catch(error => {
+        if (error.response) {
+          utils.log(error.response.data)
+          utils.log(error.response.status)
+          utils.log(error.response.headers)
+        } else if (error.request) {
+          utils.log(error.request)
+        } else {
+          utils.log('Error', error.message)
+        }
+        utils.log(error.config)
+      })
   }
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <KeyboardAvoidingView behavior='height' style={{ flex: 1 }}> 
+      <KeyboardAvoidingView behavior='height' style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View
             style={{

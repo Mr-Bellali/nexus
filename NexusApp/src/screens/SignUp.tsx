@@ -9,6 +9,9 @@ import {
 } from 'react-native'
 import Input from '../common/Input'
 import Botton from '../common/Button'
+import utils from '../core/utils'
+import api from '../core/api'
+import useGlobal from '../core/global'
 
 interface SignUpProps {
   navigation: any
@@ -27,6 +30,8 @@ const SignUpScreen = ({ navigation }: SignUpProps) => {
   const [lastNameError, setLastNameError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [confirmPasswordError, setConfirmPasswordError] = useState('')
+
+  const login = useGlobal(state => state.login)
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -67,7 +72,33 @@ const SignUpScreen = ({ navigation }: SignUpProps) => {
       || !confirmPassword)
       return
 
-
+    api({
+      method: 'POST',
+      url: '/auth/register',
+      data: {
+        username,
+        firstName,
+        lastName,
+        password,
+        confirmPassword
+      }
+    })
+      .then(response => {
+        utils.log('login: ', response.data)
+        login(response.data.user, {username, password})
+      })
+      .catch(error => {
+        if (error.response) {
+          utils.log(error.response.data)
+          utils.log(error.response.status)
+          utils.log(error.response.headers)
+        } else if (error.request) {
+          utils.log(error.request)
+        } else {
+          utils.log('Error', error.message)
+        }
+        utils.log(error.config)
+      })
   }
 
   return (
@@ -76,9 +107,9 @@ const SignUpScreen = ({ navigation }: SignUpProps) => {
         flex: 1,
       }}
     >
-      <KeyboardAvoidingView behavior='height' style={{flex: 1}}>
+      <KeyboardAvoidingView behavior='height' style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          
+
           <View style={{
             flex: 1,
             justifyContent: 'center',

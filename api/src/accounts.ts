@@ -32,7 +32,8 @@ async function generateSignedJWT(account: Account, c: Context<{ Bindings: Cloudf
         .setIssuedAt()
         .setExpirationTime(('7d'))
         .setSubject(account.id.toString())
-        .sign(jsecret);}
+        .sign(jsecret);
+}
 
 export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>) {
     // Register 
@@ -56,8 +57,11 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
                 const token = await generateSignedJWT(account, c);
 
                 return c.json({
-                    account,
-                    token
+                    user:
+                    {
+                        account,
+                        token
+                    }
                 }, 201);
             } catch (error: any) {
                 if (error.code === 'P2002') {
@@ -83,14 +87,14 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
                     username
                 }
             });
-            if(!account) {
+            if (!account) {
                 return c.json({ error: 'Invalid credentials', code: ErrorCodes.BadAuth }, 401);
             }
 
             // Verify the password
             const valid = await bcrypt.compare(password, account.hashedPassword);
-            if(!valid){
-                return c.json({ error: 'Invalid credentials', code: ErrorCodes.BadAuth}, 401)
+            if (!valid) {
+                return c.json({ error: 'Invalid credentials', code: ErrorCodes.BadAuth }, 401)
             }
 
             // Generate JWT token
@@ -104,8 +108,10 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
             }
 
             return c.json({
-                account: neededAccount,
-                token
+                user: {
+                    account: neededAccount,
+                    token
+                }
             })
         }
     )
