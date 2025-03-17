@@ -1,29 +1,18 @@
-import { DurableObject } from "cloudflare:workers";
-import { Hono } from 'hono';
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { CloudflareBindings } from './common/cloudflare';
+import { logger } from "hono/logger";
+import { cors } from "hono/cors";
+import { setupAuthApi } from './accounts';
+import { Chat } from './chat';
+export { Chat }
 
-export class MyDurableObject extends DurableObject<Env> {
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env);
-	}
-	async sayHello(name: string): Promise<string> {
-		return `Hello, ${name}!`;
-	}
-}
+const app = new OpenAPIHono();
+const api = new OpenAPIHono<{ Bindings: CloudflareBindings }>();
+api.use('*', logger())
+api.use('*', cors())
 
-// export default {
-// 	async fetch(request, env, ctx): Promise<Response> {
-// 		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
-// 		let stub = env.MY_DURABLE_OBJECT.get(id);
-// 		let greeting = await stub.sayHello("world");
-// 		return new Response(greeting);
-// 	},
-// } satisfies ExportedHandler<Env>;
+setupAuthApi(api)
 
-const app = new Hono<{ Bindings: Env}>();
+app.route('/api', api);
 
- 
-app.get('/', c => {
-	return c.json({ message: 'Hello World' });
-   });
-   
-   export default app;
+export default app;
