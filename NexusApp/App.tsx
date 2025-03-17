@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   StatusBar,
 } from 'react-native';
@@ -24,11 +24,13 @@ const LightTheme = {
 const Stack = createNativeStackNavigator()
 
 function App() {
-
-  const [initialized] = useState(true)
-  // const [authenticated] = useState(false)
-
+  const initialized = useGlobal(state => state.initialized)
   const authenticated = useGlobal(state => state.authenticated)
+  const init = useGlobal(state => state.init)
+
+  useEffect(() => {
+    init()
+  })
 
   return (
     <NavigationContainer theme={LightTheme}>

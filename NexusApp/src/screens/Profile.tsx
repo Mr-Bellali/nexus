@@ -1,12 +1,62 @@
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import React from 'react'
 import { Image, Text, TouchableOpacity, View } from 'react-native'
+import { ImageLibraryOptions, launchImageLibrary } from 'react-native-image-picker'
 import useGlobal from '../core/global'
+import utils from '../core/utils'
 
+function ProfileImage() {
+  return (
+    <TouchableOpacity
+      style={{ marginBottom: 20 }}
+      onPress={() => {
+        launchImageLibrary({ includeBase64: true} as ImageLibraryOptions, (response) => {
+          utils.log('image library: ', response)
+          if (response.didCancel) return
+          if(response.assets === undefined) return
+          const file = response.assets[0]
+          // ......
+
+          
+        })
+      }}
+    >
+      <Image
+        source={require('../assets/images/Profile.png')}
+        style={{
+          width: 180,
+          height: 180,
+          borderRadius: 90,
+          position: 'relative'
+        }}
+      />
+      <View
+        style={{
+          backgroundColor: '#202020',
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          borderWidth: 3,
+          borderColor: 'white'
+        }}
+      >
+        <FontAwesomeIcon
+          icon='pencil'
+          size={15}
+          color='#D0D0D0'
+        />
+      </View>
+    </TouchableOpacity>
+  )
+}
 
 function ProfileLogout() {
   const logout = useGlobal(state => state.logout)
-
   return (
     <TouchableOpacity
       onPress={logout}
@@ -39,6 +89,7 @@ function ProfileLogout() {
 }
 
 const ProfileScreen = () => {
+  const user = useGlobal(state => state.user)
   return (
     <View
       style={{
@@ -47,25 +98,24 @@ const ProfileScreen = () => {
         padding: 100
       }}
     >
-      <Image
-        source={require('../assets/images/Profile.png')}
-        style={{ width: 180, height: 180, borderRadius: 90, marginBottom: 20 }}
-      />
+
+      <ProfileImage />
+
       <Text style={{
         textAlign: 'center',
         color: '#303030',
         fontSize: 20,
         fontWeight: 'bold',
-        marginTop: 6
+        marginBottom: 6
       }}>
-        Bellali Yassine
+        {`${user.account.lastName} ${user.account.firstName}`}
       </Text>
       <Text style={{
         textAlign: 'center',
         color: '#606060',
         fontSize: 14
       }}>
-        @yassine
+        @{user.account.username}
       </Text>
 
       <ProfileLogout />
