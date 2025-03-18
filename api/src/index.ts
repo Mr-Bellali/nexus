@@ -3,7 +3,7 @@ import { CloudflareBindings } from './common/cloudflare';
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { setupAuthApi } from './accounts';
-import { Chat } from './chat';
+import { Chat, setupChatApi } from './chat';
 export { Chat }
 
 const app = new OpenAPIHono();
@@ -12,6 +12,7 @@ api.use('*', logger())
 api.use('*', cors())
 
 setupAuthApi(api)
+setupChatApi(api)
 
 app.route('/api', api);
 

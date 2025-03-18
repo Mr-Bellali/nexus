@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { AuthState, Credentials } from './types';
 import secure from './secure';
-import api from './api';
+import api, { ADDRESS } from './api';
+import utils from './utils';
 
 
-const useGlobal = create<AuthState>((set) => ({
+const useGlobal = create<AuthState>((set, get) => ({
   // -------------------------------------------------------- \\
   //  Initialization
   // -------------------------------------------------------- \\
@@ -26,6 +27,8 @@ const useGlobal = create<AuthState>((set) => ({
           throw 'Authentication error'
         }
         const user = response.data.user
+        const token = response.data.user.token
+        secure.set('token', token)
         set((state) => ({
           initialized: true,
           authenticated: true,
@@ -48,8 +51,10 @@ const useGlobal = create<AuthState>((set) => ({
   authenticated: false,
   user: {},
 
-  login: (user: any, credentials: any) => {
+  login: (user: any, credentials: any, token: any) => {
     secure.set('credentials', credentials)
+    secure.set('token', token)
+
     set((state) => ({
       authenticated: true,
       user: user,
@@ -63,6 +68,55 @@ const useGlobal = create<AuthState>((set) => ({
       user: {},
     }));
   },
+
+  // -------------------------------------------------------- \\
+  //  WebSocket
+  // -------------------------------------------------------- \\
+  socket: null,
+  socketConnect: async () => {
+    const token = await secure.get('token')
+
+    const socket = new WebSocket(
+      `ws://${ADDRESS}/chat?token=${token}`
+    )
+
+    socket.onopen = () => {
+      utils.log('socket.open')
+    }
+
+    socket.onmessage = () => {
+      utils.log('socket.onMessage')
+    }
+
+    socket.onerror = () => {
+      utils.log('socket.onError')
+    }
+
+    socket.onclose = () => {
+      utils.log('socket.onClose')
+    }
+
+    set((state) => ({ socket }));
+
+  },
+  socketClose: () => {
+
+  },
+
+  // -------------------------------------------------------- \\
+  //  Thumbnail
+  // -------------------------------------------------------- \\
+  uploadThumbnail: (file) => {
+    const socket = get().socket
+    socket?.send(JSON.stringify({
+      source: 'uploadthumbnail',
+      base64: file.base64,
+      filename: file.fileName
+    }))
+  }
+
 }));
+
+
 
 export default useGlobal;

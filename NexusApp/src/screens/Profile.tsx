@@ -6,18 +6,18 @@ import useGlobal from '../core/global'
 import utils from '../core/utils'
 
 function ProfileImage() {
+  const uploadThumbnail = useGlobal(state => state.uploadThumbnail)
   return (
     <TouchableOpacity
       style={{ marginBottom: 20 }}
       onPress={() => {
         launchImageLibrary({ includeBase64: true} as ImageLibraryOptions, (response) => {
-          utils.log('image library: ', response)
+          // utils.log('image library: ', response)
           if (response.didCancel) return
           if(response.assets === undefined) return
           const file = response.assets[0]
           // ......
-
-          
+          uploadThumbnail(file)
         })
       }}
     >

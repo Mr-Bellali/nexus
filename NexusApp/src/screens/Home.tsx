@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import React, { useLayoutEffect } from 'react'
+import React, { useEffect, useLayoutEffect } from 'react'
 import RequestsScreen from './Requests'
 import FriendsScreen from './Friends'
 import ProfileScreen from './Profile'
@@ -10,6 +10,7 @@ import {
   View, 
   Image 
 } from 'react-native'
+import useGlobal from '../core/global'
 
 interface HomeProps {
   navigation: any;
@@ -18,11 +19,23 @@ interface HomeProps {
 const Tab = createBottomTabNavigator()
 
 const HomeScreen = ({ navigation }: HomeProps) => {
+
+  const socketConnect = useGlobal(state => state.socketConnect)
+  const socketClose = useGlobal(state => state.socketClose)
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false
     })
   }, [])
+
+  useEffect(()=>{
+    socketConnect()
+    return () => {
+      socketClose()
+    }
+  },[])
+
   return (
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({

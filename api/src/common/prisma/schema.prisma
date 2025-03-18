@@ -23,4 +23,7 @@ model Account {
   firstName      String
   lastName       String
   hashedPassword String
+  thumbNail      String?  @unique
+  mimeType       String?
+  fileName       String?
 }
