@@ -38,6 +38,10 @@ const HomeScreen = ({ navigation }: HomeProps) => {
     }
   }, [])
 
+  function onSearch() {
+    navigation.navigate('Search')
+  }
+
 
   return (
     <Tab.Navigator
@@ -51,7 +55,9 @@ const HomeScreen = ({ navigation }: HomeProps) => {
           </View>
         ),
         headerRight: () => (
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={onSearch}
+          >
             <FontAwesomeIcon
               style={{ marginRight: 16 }}
               icon="magnifying-glass"

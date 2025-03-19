@@ -85,7 +85,7 @@ const SignUpScreen = ({ navigation }: SignUpProps) => {
     })
       .then(response => {
         utils.log('login: ', response.data)
-        login(response.data.user, {username, password})
+        login(response.data.user, {username, password}, response.data.token)
       })
       .catch(error => {
         if (error.response) {

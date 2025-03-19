@@ -117,7 +117,13 @@ const useGlobal = create<AuthState>((set, get) => ({
     }
 
     socket.onclose = () => {
-      utils.log('socket.onClose')
+      const socket = get().socket
+      if(socket) {
+        socket.close()
+      }
+      set((state) => ({
+        socket: null
+      }))
     }
 
     set((state) => ({ socket }));

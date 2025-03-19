@@ -63,7 +63,7 @@ const SignInScreen = ({ navigation }: SignInProps) => {
     })
       .then(response => {
         utils.log('login: ', response.data)
-        login(response.data.user, {username, password})
+        login(response.data.user, {username, password}, response.data.user.token)
       })
       .catch(error => {
         if (error.response) {
