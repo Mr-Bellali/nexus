@@ -7,7 +7,8 @@ import { Account } from "@prisma/client";
 import { Context } from "hono";
 import { JWTPayload, SignJWT } from 'jose';
 import { ErrorCodes } from "./common/errors";
-
+import { middlewareVerifyJWT } from "./middlewares";
+import { r2FileDownload } from "./common/utils";
 
 export const accountFormSchema = z.object({
     username: z.string().min(5).max(13),
@@ -34,6 +35,7 @@ async function generateSignedJWT(account: Account, c: Context<{ Bindings: Cloudf
         .setSubject(account.id.toString())
         .sign(jsecret);
 }
+
 
 export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>) {
     // Register 
@@ -105,6 +107,7 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
                 username: account.username,
                 firstName: account.firstName,
                 lastName: account.lastName,
+                thumbnail: account.thumbNail
             }
 
             return c.json({
@@ -115,4 +118,25 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
             })
         }
     )
+}
+
+export async function setupAccountApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>) {
+    api.get('/thumbnail/:id',
+        await middlewareVerifyJWT(false),
+        async (c)=> {
+            const thumbnail = c.req.param('id')
+            if(!thumbnail){
+                return c.json({
+                    error: 'missing thumbnail id'
+                },400)
+            }
+            const prisma = getPrismaClient(c);
+            const account = await prisma.account.findFirst({
+                where: {
+                    thumbNail: thumbnail
+                }
+            })
+            return r2FileDownload(c, thumbnail, account?.mimeType as string, c.env.chat_media);
+        }
+     )
 }

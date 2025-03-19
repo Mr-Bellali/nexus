@@ -5,12 +5,13 @@ import FriendsScreen from './Friends'
 import ProfileScreen from './Profile'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { IconProp } from '@fortawesome/fontawesome-svg-core'
-import { 
-  TouchableOpacity, 
-  View, 
-  Image 
+import {
+  TouchableOpacity,
+  View,
+  Image
 } from 'react-native'
 import useGlobal from '../core/global'
+import Thumbnail from '../common/Thumbnail'
 
 interface HomeProps {
   navigation: any;
@@ -22,6 +23,7 @@ const HomeScreen = ({ navigation }: HomeProps) => {
 
   const socketConnect = useGlobal(state => state.socketConnect)
   const socketClose = useGlobal(state => state.socketClose)
+  const user = useGlobal(state => state.user)
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -29,31 +31,32 @@ const HomeScreen = ({ navigation }: HomeProps) => {
     })
   }, [])
 
-  useEffect(()=>{
+  useEffect(() => {
     socketConnect()
     return () => {
       socketClose()
     }
-  },[])
+  }, [])
+
 
   return (
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({
         headerLeft: () => (
-          <View style={{ marginLeft: 16}}>
-            <Image 
-              source={require('../assets/images/Profile.png')}
-              style={{ width: 32, height: 32, borderRadius: 15}}
+          <View style={{ marginLeft: 16 }}>
+            <Thumbnail
+              url={user.account.thumbnail}
+              size={32}
             />
           </View>
         ),
         headerRight: () => (
           <TouchableOpacity>
-            <FontAwesomeIcon 
-              style={{marginRight: 16}}
-              icon="magnifying-glass" 
-              size={22} 
-              color="#404040" 
+            <FontAwesomeIcon
+              style={{ marginRight: 16 }}
+              icon="magnifying-glass"
+              size={22}
+              color="#404040"
             />
           </TouchableOpacity>
         ),

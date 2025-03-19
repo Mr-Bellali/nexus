@@ -4,9 +4,16 @@ import { Image, Text, TouchableOpacity, View } from 'react-native'
 import { ImageLibraryOptions, launchImageLibrary } from 'react-native-image-picker'
 import useGlobal from '../core/global'
 import utils from '../core/utils'
+import Thumbnail from '../common/Thumbnail'
 
 function ProfileImage() {
   const uploadThumbnail = useGlobal(state => state.uploadThumbnail)
+  const user = useGlobal(state => state.user)
+
+  console.log("user-here: ", user)
+
+  
+
   return (
     <TouchableOpacity
       style={{ marginBottom: 20 }}
@@ -21,15 +28,10 @@ function ProfileImage() {
         })
       }}
     >
-      <Image
-        source={require('../assets/images/Profile.png')}
-        style={{
-          width: 180,
-          height: 180,
-          borderRadius: 90,
-          position: 'relative'
-        }}
-      />
+     <Thumbnail
+      url= {user.account.thumbnail}
+      size={180}
+     />
       <View
         style={{
           backgroundColor: '#202020',

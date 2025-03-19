@@ -10,5 +10,5 @@ export type CloudflareBindings = {
 
     // Chat
     CHAT: DurableObjectNamespace;
-    CHAT_MEDIA: R2Bucket;
+    chat_media: R2Bucket;
 }

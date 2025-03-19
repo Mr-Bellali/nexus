@@ -1,4 +1,5 @@
 export const ErrorCodes = {
+  NotFound: 'not_found',
   AlreadyUsed: 'already_used',
 
   // Account

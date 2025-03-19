@@ -9,13 +9,14 @@ import { MAX_MEDIA_SIZE } from "./common/helpers";
 import { getPrismaClient } from "./common/prisma";
 
 export enum DataType {
-    UPLOADTHUMBNAIL = "uploadthumbnail",
+    THUMBNAIL = "thumbnail",
 }
 
 const webSocketDataSchema = z.object({
     source: z.nativeEnum(DataType),
     base64: z.string().optional(),
-    filename: z.string().optional()
+    filename: z.string().optional(),
+    type: z.string()
 })
 
 export class Chat {
@@ -79,75 +80,94 @@ export class Chat {
                 error: validateSocketData.error.errors,
             })
         }
-        const { source, base64, filename } = validateSocketData.data;
+        const { source, base64, filename, type } = validateSocketData.data;
 
         switch (source) {
-            case 'uploadthumbnail':
-                if (!base64) {
-                    return ws.send(JSON.stringify({
-                        error: "Can't upload an empty file"
-                    }))
+            case 'thumbnail':
+                switch (type) {
+                    case 'upload':
+                        if (!base64) {
+                            return ws.send(JSON.stringify({
+                                error: "Can't upload an empty file"
+                            }))
+                        }
+
+                        // decode base64
+                        const decoded = Buffer.from(base64, 'base64');
+
+                        // Check the file size must not be above 10mB
+                        if (decoded.length > MAX_MEDIA_SIZE) {
+                            console.error(`The file size of the proof document is too large: ${decoded.length}`);
+                            return ws.send(JSON.stringify({
+                                error: "Document is too large, 10MB max"
+                            }))
+                        }
+
+                        // Detect file type
+                        const type = await fileDetectFormat(base64);
+                        if (!type) {
+                            return ws.send(JSON.stringify({
+                                error: "Couldn't detect the file type"
+                            }))
+                        }
+
+                        // Check if the file type supported
+                        if (!['image/jpeg', 'image/png', 'image/gif'].includes(type.mime)) {
+                            console.error(`Invalid file type of the file: ${type.mime}`);
+                            return ws.send(JSON.stringify({
+                                error: "Unsoppurted file format, please try another one"
+                            }))
+                        }
+
+                        // Generate a unique file name and upload the file to R2
+                        const uniqueFileName = `${Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}.${type.ext}`;
+                        console.log("bucket: ", this.env.chat_media)
+                        await this.env.chat_media.put(uniqueFileName, decoded)
+
+                        // initialize prisma
+                        const ctx = { env: this.env } as unknown as Context<{ Bindings: CloudflareBindings }>;
+                        const prisma = getPrismaClient(ctx)
+
+                        // update the thumbnail 
+                        let account
+                        try {
+                            account = await prisma.account.update({
+                                where: {
+                                    id: senderAccountId
+                                },
+                                data: {
+                                    thumbNail: uniqueFileName,
+                                    mimeType: type.mime,
+                                    fileName: filename
+                                }
+                            })
+
+                            console.log("updated thumbnail: ", account)
+                        } catch (error) {
+                            console.error("error: ", error)
+                            return ws.send(JSON.stringify({
+                                error: error
+                            }))
+                        }
+
+                        const neededAccount = {
+                            id: account.id,
+                            username: account.username,
+                            firstName: account.firstName,
+                            lastName: account.lastName,
+                            thumbnail: account.thumbNail
+                        }
+
+                        ws.send(JSON.stringify({
+                           source: 'thumbnail',
+                           type: 'upload',
+                           account: neededAccount,
+                        }))
+                        break;
+
+                    default:
+                        break;
                 }
-
-                // decode base64
-                const decoded = Buffer.from(base64, 'base64');
-
-                // Check the file size must not be above 10mB
-                if (decoded.length > MAX_MEDIA_SIZE) {
-                    console.error(`The file size of the proof document is too large: ${decoded.length}`);
-                    return ws.send(JSON.stringify({
-                        error: "Document is too large, 10MB max"
-                    }))
-                }
-
-                // Detect file type
-                const type = await fileDetectFormat(base64);
-                if (!type) {
-                    return ws.send(JSON.stringify({
-                        error: "Couldn't detect the file type"
-                    }))
-                }
-
-                // Check if the file type supported
-                if (!['image/jpeg', 'image/png', 'image/gif'].includes(type.mime)) {
-                    console.error(`Invalid file type of the file: ${type.mime}`);
-                    return ws.send(JSON.stringify({
-                        error: "Unsoppurted file format, please try another one"
-                    }))
-                }
-
-                // Generate a unique file name and upload the file to R2
-                const uniqueFileName = `${Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}.${type.ext}`;
-                await this.env.CHAT_MEDIA.put(uniqueFileName, decoded)
-
-                // initialize prisma
-                const ctx = { env: this.env } as unknown as Context<{ Bindings: CloudflareBindings }>;
-                const prisma = getPrismaClient(ctx)
-
-                // update the thumbnail 
-              try {
-                const account = await prisma.account.update({
-                    where: {
-                        id: senderAccountId
-                    },
-                    data :{
-                        thumbNail: uniqueFileName,
-                        mimeType: type.mime,
-                        fileName: filename
-                    }
-                })
-                
-                console.log("updated thumbnail: ", account)
-              } catch (error) {
-                console.error("error: ", error)
-                return ws.send(JSON.stringify({
-                    error: error
-                }))
-              }
-
-                ws.send(JSON.stringify({
-                    thumbnail: base64,
-                }))
 
                 break;
 

@@ -4,6 +4,18 @@ import secure from './secure';
 import api, { ADDRESS } from './api';
 import utils from './utils';
 
+// -------------------------------------------------------- \\
+//  Socket recieve message handlers
+// -------------------------------------------------------- \\
+function responseThumbnail(set: Function, get: Function , data: Object) {
+  set((state) => ({
+    user: {
+      account: data
+    }
+  }))
+}
+
+
 
 const useGlobal = create<AuthState>((set, get) => ({
   // -------------------------------------------------------- \\
@@ -84,8 +96,20 @@ const useGlobal = create<AuthState>((set, get) => ({
       utils.log('socket.open')
     }
 
-    socket.onmessage = () => {
-      utils.log('socket.onMessage')
+    socket.onmessage = (event) => {
+      // Convert data to json
+      const parsed = JSON.parse(event.data)
+      utils.log('onMessage: ', parsed)
+      const responses:any = {
+        'thumbnail': responseThumbnail
+      }
+      const resp = responses[parsed.source]
+      if (!resp) {
+        utils.log('parsed source [ ', parsed.source, ' ]not found')
+        return
+      }
+      // Call responses function 
+      responseThumbnail(set, get, parsed.account)
     }
 
     socket.onerror = () => {
@@ -109,7 +133,8 @@ const useGlobal = create<AuthState>((set, get) => ({
   uploadThumbnail: (file) => {
     const socket = get().socket
     socket?.send(JSON.stringify({
-      source: 'uploadthumbnail',
+      source: 'thumbnail',
+      type: 'upload',
       base64: file.base64,
       filename: file.fileName
     }))
