@@ -179,6 +179,13 @@ const useGlobal = create<AuthState>((set, get) => ({
       base64: file.base64,
       filename: file.fileName
     }))
+  },
+
+   // -------------------------------------------------------- \\
+  //  Thumbnail
+  // -------------------------------------------------------- \\
+  requestConnect: (id: number) => {
+    
   }
 
 }));

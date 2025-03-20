@@ -18,6 +18,7 @@ interface SearchRowProps {
   user: User
 }
 
+
 function SearchRow({ user }: SearchRowProps) {
   utils.log("SearchRow", user)
   return (
@@ -78,6 +79,8 @@ function SearchButton({ user }: SearchRowProps) {
     )
   }
 
+  const requestConnect = useGlobal(state => state.requestConnect)
+
   let data: {
     text: string,
     disabled: boolean,
@@ -92,7 +95,7 @@ function SearchButton({ user }: SearchRowProps) {
     case 'no-connection':
       data.text = 'Connect'
       data.disabled = false
-      data.onPress = () => { }
+      data.onPress = () => requestConnect(user.id)
       break;
     case 'pending-them':
       data.text = 'Pending'

@@ -143,7 +143,6 @@ export class Chat {
                                 data: {
                                     thumbnail: uniqueFileName,
                                     mimeType: type.mime,
-                                    fileName: filename
                                 }
                             })
                         } catch (error) {

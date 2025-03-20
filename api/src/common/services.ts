@@ -21,11 +21,46 @@ export async function searchUsers(env: CloudflareBindings, query: string, id: nu
             username: true,
             thumbnail: true,
             firstName: true,
-            lastName: true   
+            lastName: true,
+            sentConnections: {
+                where: { receiverId: id },
+                select: { accepted: true }
+            },
+            receivedConnections: {
+                where: { senderId: id },
+                select: { accepted: true }
+            }
         }
     });
 
-    console.log("users: ", users)
+    // Format the users to return their status according to the searcher
+    const enhancedUsers = users.map(user => {
+        const sentConnection = user.sentConnections[0]; // If the user sent a request
+        const receivedConnection = user.receivedConnections[0]; // If the user received a request
 
-    return users;
+        let status: string = "no-connection";
+        if (sentConnection?.accepted) {
+            status = "connected";
+        } else if (receivedConnection?.accepted) {
+            status = "connected";
+        } else if (sentConnection) {
+            status = "pending-me"; // I sent the request, but it's pending
+        } else if (receivedConnection) {
+            status = "pending-them"; // They sent the request, but it's pending
+        }
+
+        return {
+            id: user.id,
+            username: user.username,
+            thumbnail: user.thumbnail,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            status: status
+        }
+    })
+
+    console.log("users with status: ", enhancedUsers);
+    return enhancedUsers;
+
+
 }

@@ -1,4 +1,5 @@
 export interface User {
+  id: number,
   thumbnail: string | null,
   firstName: string,
   lastName: string,
@@ -20,6 +21,7 @@ export interface AuthState {
   socketClose: () => void;
   uploadThumbnail: (file: any) => void
   searchUsers: (query: string) => void
+  requestConnect : (id: number) => void
 }
 export type Credentials = {
   username: string;
