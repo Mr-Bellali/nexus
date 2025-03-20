@@ -107,7 +107,7 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
                 username: account.username,
                 firstName: account.firstName,
                 lastName: account.lastName,
-                thumbnail: account.thumbNail
+                thumbnail: account.thumbnail
             }
 
             return c.json({
@@ -133,7 +133,7 @@ export async function setupAccountApi(api: OpenAPIHono<{ Bindings: CloudflareBin
             const prisma = getPrismaClient(c);
             const account = await prisma.account.findFirst({
                 where: {
-                    thumbNail: thumbnail
+                    thumbnail: thumbnail
                 }
             })
             return r2FileDownload(c, thumbnail, account?.mimeType as string, c.env.chat_media);

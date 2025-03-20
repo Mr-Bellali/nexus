@@ -1,24 +1,182 @@
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import React, { useState } from 'react'
-import { 
-  SafeAreaView, 
-  TextInput, 
-  View 
+import React, { useEffect, useState } from 'react'
+import {
+  FlatList,
+  SafeAreaView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native'
 import Empty from '../common/Empty'
+import Thumbnail from '../common/Thumbnail'
+import { User } from '../core/types'
+import useGlobal from '../core/global'
+import utils from '../core/utils'
+
+interface SearchRowProps {
+  user: User
+}
+
+function SearchRow({ user }: SearchRowProps) {
+  utils.log("SearchRow", user)
+  return (
+    <View
+      style={{
+        paddingHorizontal: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderColor: '#f0f0f0',
+        height: 106
+      }}
+    >
+      <Thumbnail
+        url={user.thumbnail as string}
+        size={65}
+      />
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: 16
+        }}
+      >
+        <Text
+          style={{
+            fontWeight: 'bold',
+            color: '#202020',
+            marginBottom: 4
+          }}
+        >
+          {user.lastName} {user.firstName}
+        </Text>
+        <Text
+          style={{
+            color: '#606060',
+          }}
+        >
+          {user.username}
+        </Text>
+      </View>
+      <SearchButton user={user} />
+    </View>
+  )
+}
+
+function SearchButton({ user }: SearchRowProps) {
+  // Add tick if user is already connected
+  if (user.status === "connected") {
+    return (
+      <FontAwesomeIcon
+        icon='circle-check'
+        size={30}
+        color='#20d080'
+        style={{
+          marginRight: 10
+        }}
+      />
+    )
+  }
+
+  let data: {
+    text: string,
+    disabled: boolean,
+    onPress: any
+  } = {
+    text: '',
+    disabled: true,
+    onPress: () => { }
+  }
+
+  switch (user.status) {
+    case 'no-connection':
+      data.text = 'Connect'
+      data.disabled = false
+      data.onPress = () => { }
+      break;
+    case 'pending-them':
+      data.text = 'Pending'
+      data.disabled = true
+      data.onPress = () => { }
+      break;
+    case 'pending-me':
+      data.text = 'Accept'
+      data.disabled = false
+      data.onPress = () => { }
+      break;
+
+    default:
+      break;
+  }
+
+  return (
+    <TouchableOpacity
+      style={{
+        backgroundColor: data.disabled ? '#505055' : '#202020',
+        paddingHorizontal: 14,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 18
+      }}
+      disabled={data.disabled}
+      onPress={data.onPress}
+    >
+      <Text
+        style={{
+          color: data.disabled ? '#808080' : 'white',
+          fontWeight: 'bold'
+
+        }}
+      >
+        {data.text}
+      </Text>
+    </TouchableOpacity>
+  )
+
+}
 
 const SearchScreen = () => {
 
   const [query, setQuery] = useState('')
+  const searchList = useGlobal(state => state.searchList)
+  const searcUsers = useGlobal(state => state.searchUsers)
 
-  const searchList:any = [
-    {
-      
-    }
-  ]
+  useEffect(() => {
+    searcUsers(query)
+  }, [query])
+
+  // const searchList: any = [
+  //   {
+  //     thumbnail: null,
+  //     name: 'Silly Name',
+  //     username: 'Sillyn',
+  //     status: 'pending-them'
+  //   },
+  //   {
+  //     thumbnail: null,
+  //     name: 'Silly Something',
+  //     username: 'Sillys',
+  //     status: 'pending-me'
+  //   },
+  //   {
+  //     thumbnail: null,
+  //     name: 'Silly Red',
+  //     username: 'Sillyr',
+  //     status: 'connected'
+  //   },
+  //   {
+  //     thumbnail: null,
+  //     name: 'Silly Blue',
+  //     username: 'Sillyb',
+  //     status: 'no-connection'
+  //   },
+  // ]
+
+
 
   return (
-    <SafeAreaView 
+    <SafeAreaView
       style={{
         flex: 1
       }}
@@ -58,19 +216,25 @@ const SearchScreen = () => {
         </View>
       </View>
       {searchList === null ? (
-       <Empty 
-       icon='magnifying-glass'
-       message='Search for friends'
-       centered={false}
-     />
-      ): searchList.length === 0 ? (
-        <Empty 
+        <Empty
+          icon='magnifying-glass'
+          message='Search for friends'
+          centered={false}
+        />
+      ) : searchList.length === 0 ? (
+        <Empty
           icon='triangle-exclamation'
           message={'no user found for "' + query + '"'}
           centered={false}
         />
-      ): (
-        <View />
+      ) : (
+        <FlatList
+          data={searchList}
+          renderItem={({ item }) => (
+            <SearchRow user={item} />
+          )}
+          keyExtractor={item => item.username}
+        />
       )}
     </SafeAreaView>
   )

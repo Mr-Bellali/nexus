@@ -6,7 +6,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  previewFeatures = ["driverAdapters", "fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -23,7 +23,7 @@ model Account {
   firstName      String
   lastName       String
   hashedPassword String
-  thumbNail      String?  @unique
+  thumbnail      String?  @unique
   mimeType       String?
   fileName       String?
 }

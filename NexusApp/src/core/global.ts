@@ -7,7 +7,19 @@ import utils from './utils';
 // -------------------------------------------------------- \\
 //  Socket recieve message handlers
 // -------------------------------------------------------- \\
-function responseThumbnail(set: Function, get: Function , data: Object) {
+function responseThumbnail(set: Function, get: Function, data: Object) {
+  set((state) => ({
+    user: {
+      account: data
+    }
+  }))
+}
+
+function responseSearch(set: Function, get: Function, data: Object) {
+  utils.log("response search data:", data)
+  set((state) => ({
+    searchList: data
+  }))
   set((state) => ({
     user: {
       account: data
@@ -99,9 +111,9 @@ const useGlobal = create<AuthState>((set, get) => ({
     socket.onmessage = (event) => {
       // Convert data to json
       const parsed = JSON.parse(event.data)
-      utils.log('onMessage: ', parsed)
-      const responses:any = {
-        'thumbnail': responseThumbnail
+      const responses: any = {
+        'thumbnail': responseThumbnail,
+        'search': responseSearch
       }
       const resp = responses[parsed.source]
       if (!resp) {
@@ -110,6 +122,7 @@ const useGlobal = create<AuthState>((set, get) => ({
       }
       // Call responses function 
       responseThumbnail(set, get, parsed.account)
+      responseSearch(set, get, parsed.users)
     }
 
     socket.onerror = () => {
@@ -118,7 +131,7 @@ const useGlobal = create<AuthState>((set, get) => ({
 
     socket.onclose = () => {
       const socket = get().socket
-      if(socket) {
+      if (socket) {
         socket.close()
       }
       set((state) => ({
@@ -130,6 +143,28 @@ const useGlobal = create<AuthState>((set, get) => ({
 
   },
   socketClose: () => {
+
+  },
+
+  // -------------------------------------------------------- \\
+  //  Searching
+  // -------------------------------------------------------- \\
+  searchList: null,
+
+  searchUsers: (query: string) => {
+
+    if (query) {
+
+      const socket = get().socket
+      socket?.send(JSON.stringify({
+        source: 'search',
+        content: query
+      }))
+    } else {
+      set((state) => ({
+        searchList: null
+      }))
+    }
 
   },
 

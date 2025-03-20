@@ -7,16 +7,19 @@ import { fileDetectFormat } from "./common/utils";
 import { ErrorCodes } from "./common/errors";
 import { MAX_MEDIA_SIZE } from "./common/helpers";
 import { getPrismaClient } from "./common/prisma";
+import { searchUsers } from "./common/services";
 
 export enum DataType {
     THUMBNAIL = "thumbnail",
+    SEARCH = "search"
 }
 
 const webSocketDataSchema = z.object({
     source: z.nativeEnum(DataType),
     base64: z.string().optional(),
     filename: z.string().optional(),
-    type: z.string()
+    type: z.string().optional(),
+    content: z.string().optional()
 })
 
 export class Chat {
@@ -80,7 +83,10 @@ export class Chat {
                 error: validateSocketData.error.errors,
             })
         }
-        const { source, base64, filename, type } = validateSocketData.data;
+
+        const { source, base64, filename, type, content } = validateSocketData.data;
+
+        console.log("source: ", source)
 
         switch (source) {
             case 'thumbnail':
@@ -121,7 +127,6 @@ export class Chat {
 
                         // Generate a unique file name and upload the file to R2
                         const uniqueFileName = `${Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}.${type.ext}`;
-                        console.log("bucket: ", this.env.chat_media)
                         await this.env.chat_media.put(uniqueFileName, decoded)
 
                         // initialize prisma
@@ -136,13 +141,11 @@ export class Chat {
                                     id: senderAccountId
                                 },
                                 data: {
-                                    thumbNail: uniqueFileName,
+                                    thumbnail: uniqueFileName,
                                     mimeType: type.mime,
                                     fileName: filename
                                 }
                             })
-
-                            console.log("updated thumbnail: ", account)
                         } catch (error) {
                             console.error("error: ", error)
                             return ws.send(JSON.stringify({
@@ -155,13 +158,13 @@ export class Chat {
                             username: account.username,
                             firstName: account.firstName,
                             lastName: account.lastName,
-                            thumbnail: account.thumbNail
+                            thumbnail: account.thumbnail
                         }
 
                         ws.send(JSON.stringify({
-                           source: 'thumbnail',
-                           type: 'upload',
-                           account: neededAccount,
+                            source: 'thumbnail',
+                            type: 'upload',
+                            account: neededAccount,
                         }))
                         break;
 
@@ -170,6 +173,16 @@ export class Chat {
                 }
 
                 break;
+
+            case 'search':
+                console.log("inside search!!")
+                // console.log("users: ", await searchUsers(this.env, content as string, senderAccountId))
+                const users =  await searchUsers(this.env, content as string, senderAccountId);
+                ws.send(JSON.stringify({
+                    source: "search",
+                    users
+                }))
+                break
 
             default:
                 break;
@@ -182,7 +195,6 @@ export function setupChatApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
         if (c.req.header("upgrade")?.toLowerCase() !== "websocket") {
             throw new HTTPException(402);
         }
-        console.log("CHAT binding:", c.env.CHAT);
         const durableObjectId = c.env.CHAT.idFromName("chat_id");
         const ChatDO = c.env.CHAT.get(durableObjectId);
         const result = await ChatDO.fetch(c.req.raw);

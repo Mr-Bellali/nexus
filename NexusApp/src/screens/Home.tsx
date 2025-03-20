@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import useGlobal from '../core/global'
 import Thumbnail from '../common/Thumbnail'
+import utils from '../core/utils'
 
 interface HomeProps {
   navigation: any;
@@ -24,7 +25,7 @@ const HomeScreen = ({ navigation }: HomeProps) => {
   const socketConnect = useGlobal(state => state.socketConnect)
   const socketClose = useGlobal(state => state.socketClose)
   const user = useGlobal(state => state.user)
-
+  utils.log("user inside the Home.tsx",user)
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false

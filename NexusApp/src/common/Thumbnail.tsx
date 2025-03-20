@@ -2,7 +2,7 @@ import { Image } from "react-native";
 import utils from "../core/utils";
 
 interface ThumbnailProps {
-    url: string;
+    url: string | null;
     size: number
 }
 

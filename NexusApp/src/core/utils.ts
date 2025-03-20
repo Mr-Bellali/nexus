@@ -12,8 +12,8 @@ function log(...args: any[]) {
     }
 }
 
-function thumbnail(url: string) {
-    if(!url){
+function thumbnail(url: string | null) {
+    if(!url || url === null || url === undefined){
         return ProfileImage
     }
 
