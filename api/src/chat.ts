@@ -4,14 +4,16 @@ import { HTTPException } from "hono/http-exception";
 import { Context } from "hono";
 import { verifyJWT } from "./common/jwt";
 import { fileDetectFormat } from "./common/utils";
-import { ErrorCodes } from "./common/errors";
 import { MAX_MEDIA_SIZE } from "./common/helpers";
 import { getPrismaClient } from "./common/prisma";
-import { searchUsers } from "./common/services";
+import { acceptConnection, createConnection, getRecieverConnections, getUser, searchUsers } from "./common/services";
 
 export enum DataType {
     THUMBNAIL = "thumbnail",
-    SEARCH = "search"
+    SEARCH = "search",
+    REQUESTCONNECT = 'request-connect',
+    REQUESTLIST = 'request-list',
+    REQUESTACCEPT = 'request-accept'
 }
 
 const webSocketDataSchema = z.object({
@@ -19,7 +21,8 @@ const webSocketDataSchema = z.object({
     base64: z.string().optional(),
     filename: z.string().optional(),
     type: z.string().optional(),
-    content: z.string().optional()
+    content: z.string().optional(),
+    id: z.any().optional()
 })
 
 export class Chat {
@@ -75,8 +78,12 @@ export class Chat {
             return ws.close(1011, "Please Refresh the page and try again");
         }
 
+        const senderSocket = this.state.getWebSockets(`${senderAccountId}`)
+        let recieverSockets;
+
         // Validate the recieved websocket data
         const parsedData = JSON.parse(data);
+        console.log("incoming: ", parsedData)
         const validateSocketData = webSocketDataSchema.safeParse(parsedData);
         if (!validateSocketData.success) {
             return JSON.stringify({
@@ -84,7 +91,7 @@ export class Chat {
             })
         }
 
-        const { source, base64, filename, type, content } = validateSocketData.data;
+        const { source, base64, type, content, id } = validateSocketData.data;
 
         console.log("source: ", source)
 
@@ -130,8 +137,7 @@ export class Chat {
                         await this.env.chat_media.put(uniqueFileName, decoded)
 
                         // initialize prisma
-                        const ctx = { env: this.env } as unknown as Context<{ Bindings: CloudflareBindings }>;
-                        const prisma = getPrismaClient(ctx)
+                        const prisma = getPrismaClient(this.env)
 
                         // update the thumbnail 
                         let account
@@ -162,8 +168,7 @@ export class Chat {
 
                         ws.send(JSON.stringify({
                             source: 'thumbnail',
-                            type: 'upload',
-                            account: neededAccount,
+                            data: neededAccount,
                         }))
                         break;
 
@@ -176,12 +181,70 @@ export class Chat {
             case 'search':
                 console.log("inside search!!")
                 // console.log("users: ", await searchUsers(this.env, content as string, senderAccountId))
-                const users =  await searchUsers(this.env, content as string, senderAccountId);
+                const users = await searchUsers(this.env, content as string, senderAccountId);
+                console.log("users-- ", users)
                 ws.send(JSON.stringify({
                     source: "search",
-                    users
+                    data: users
                 }))
                 break
+
+            case 'request-connect':
+                // Get the requested user
+                if (!id) {
+                    return ws.send(JSON.stringify({
+                        error: "cannot send a friend request with missing id"
+                    }))
+                }
+                // const requestedUser = await getUser(this.env, id)
+                // console.log("requested user = ", requestedUser)
+
+                // Create new connection
+                const connection = await createConnection(this.env, senderAccountId, id)
+
+                // Broadcast to the sender.
+                senderSocket[0].send(JSON.stringify({
+                    source: "request-connect",
+                    data: connection
+                }))
+
+                // Brodcast to the reciever
+                 recieverSockets = this.state.getWebSockets(`${id}`);
+                for (const socket of recieverSockets) {
+                    socket.send(JSON.stringify({
+                        source: "request-connect",
+                        data: connection
+                    }))
+                }
+
+                break;
+
+            case 'request-list':
+                const connections = await getRecieverConnections(this.env, senderAccountId);
+                console.log("connections: ", connections)
+                senderSocket[0].send(JSON.stringify({
+                    source: "request-list",
+                    data: connections
+                }))
+                break;
+
+            case 'request-accept':
+                const acceptedConnection = await acceptConnection(this.env, id)       
+                console.log("accepted connection: ", acceptedConnection)         
+                senderSocket[0].send(JSON.stringify({
+                    source: "request-accept",
+                    data: acceptedConnection
+                }))
+                console.log("accepter connection sent seccussfully 1!")
+                recieverSockets = this.state.getWebSockets(`${acceptedConnection.sender.id}`);
+                for (const socket of recieverSockets) {
+                    socket.send(JSON.stringify({
+                        source: "request-accept",
+                        data: acceptedConnection
+                    }))
+                }
+                console.log("accepter connection sent seccussfully 2!")
+                break;
 
             default:
                 break;

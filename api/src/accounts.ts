@@ -43,7 +43,7 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
         zValidator('json', accountFormSchema),
         async (c) => {
             const { username, firstName, lastName, password } = c.req.valid('json')
-            const prisma = getPrismaClient(c);
+            const prisma = getPrismaClient(c.env);
             const hash = await bcrypt.hash(password, 10);
             try {
                 const account = await prisma.account.create({
@@ -83,7 +83,7 @@ export function setupAuthApi(api: OpenAPIHono<{ Bindings: CloudflareBindings }>)
         })),
         async (c) => {
             const { username, password } = c.req.valid('json');
-            const prisma = getPrismaClient(c);
+            const prisma = getPrismaClient(c.env);
             const account = await prisma.account.findFirst({
                 where: {
                     username
@@ -130,7 +130,7 @@ export async function setupAccountApi(api: OpenAPIHono<{ Bindings: CloudflareBin
                     error: 'missing thumbnail id'
                 },400)
             }
-            const prisma = getPrismaClient(c);
+            const prisma = getPrismaClient(c.env);
             const account = await prisma.account.findFirst({
                 where: {
                     thumbnail: thumbnail

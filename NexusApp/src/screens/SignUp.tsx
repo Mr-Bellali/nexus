@@ -41,8 +41,6 @@ const SignUpScreen = ({ navigation }: SignUpProps) => {
 
   function onSignUp() {
 
-    console.log('on sign up', username, firstName, lastName, password, confirmPassword)
-
     if (!username || username.length < 5) {
       setUsernameError('Username must be 5 or more caracters')
     }
@@ -84,7 +82,6 @@ const SignUpScreen = ({ navigation }: SignUpProps) => {
       }
     })
       .then(response => {
-        utils.log('login: ', response.data)
         login(response.data.user, {username, password}, response.data.token)
       })
       .catch(error => {

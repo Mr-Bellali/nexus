@@ -35,7 +35,6 @@ const SignInScreen = ({ navigation }: SignInProps) => {
   }, [])
 
   function onSignIn() {
-    console.log("on SignIn", username, password)
 
     // Check username
     if (!username) {
@@ -62,7 +61,6 @@ const SignInScreen = ({ navigation }: SignInProps) => {
       }
     })
       .then(response => {
-        utils.log('login: ', response.data)
         login(response.data.user, {username, password}, response.data.user.token)
       })
       .catch(error => {

@@ -4,8 +4,7 @@ import { getPrismaClient } from './prisma';
 
 
 export async function searchUsers(env: CloudflareBindings, query: string, id: number) {
-    const ctx = { env } as Context<{ Bindings: CloudflareBindings }>;
-    const prisma = getPrismaClient(ctx);
+    const prisma = getPrismaClient(env);
 
     const users = await prisma.account.findMany({
         where: {
@@ -16,7 +15,7 @@ export async function searchUsers(env: CloudflareBindings, query: string, id: nu
                 { lastName: { startsWith: query, mode: 'insensitive' } },
             ]
         },
-        select:{
+        select: {
             id: true,
             username: true,
             thumbnail: true,
@@ -62,5 +61,130 @@ export async function searchUsers(env: CloudflareBindings, query: string, id: nu
     console.log("users with status: ", enhancedUsers);
     return enhancedUsers;
 
+}
 
+export async function getUser(env: CloudflareBindings, id: number) {
+    const prisma = getPrismaClient(env);
+    const user = await prisma.account.findFirst({
+        where: {
+            id
+        },
+        select: {
+            id: true,
+            username: true,
+            thumbnail: true,
+            firstName: true,
+            lastName: true,
+            sentConnections: {
+                where: { receiverId: id },
+                select: { accepted: true }
+            },
+            receivedConnections: {
+                where: { senderId: id },
+                select: { accepted: true }
+            }
+        }
+    })
+    return user
+}
+
+export async function createConnection(env: CloudflareBindings, senderId: number, receiverId: number) {
+    const prisma = getPrismaClient(env);
+    const connection = await prisma.connection.create({
+        data: {
+            senderId,
+            receiverId,
+        },
+        select: {
+            id: true,
+            sender: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            receiver: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            createdAt: true
+        }
+    })
+    return connection
+}
+
+export async function getRecieverConnections(env: CloudflareBindings, receiverId: number) {
+    const prisma = getPrismaClient(env);
+    const connections = await prisma.connection.findMany({
+        where:{
+            receiverId,
+            accepted: false
+        },
+        select: {
+            id: true,
+            sender: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            receiver: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            createdAt: true
+        }
+    })
+    return connections
+}
+
+export async function acceptConnection(env: CloudflareBindings, id: string) {
+    const prisma = getPrismaClient(env)
+    const connection = await prisma.connection.update({
+        where: {
+            id
+        },
+        data: {
+            accepted: true
+        },
+        select: {
+            id: true,
+            sender: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            receiver: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            createdAt: true
+        }
+    })
+    return connection
 }

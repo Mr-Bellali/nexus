@@ -7,23 +7,79 @@ import utils from './utils';
 // -------------------------------------------------------- \\
 //  Socket recieve message handlers
 // -------------------------------------------------------- \\
+
+function responseRequestConnect(set: Function, get: Function, connection: any) {
+  const user = get().user
+
+  // If the one who's sending the request
+  // Update the search list row
+  console.log("user: ", user.account)
+  console.log("connection id: ", connection.sender.id)
+  if (user.account.id === connection.sender.id) {
+    const searchList = [...get().searchList]
+    const searchIndex = searchList.findIndex(
+      request => request.id === connection.receiver.id
+    )
+    console.log("search index: ", searchIndex)
+    if (searchIndex >= 0) {
+      searchList[searchIndex].status = 'pending-them'
+      set((state) => ({
+        searchList: searchList
+      }))
+    }
+  } else {
+    const requestsList = [...get().requestsList]
+    const requestIndex = requestsList.findIndex(
+      request => request.sender.id === connection.sender.id
+    )
+    if (requestIndex === -1) {
+      requestsList.unshift(connection)
+      set((state) => ({
+        requestsList
+      }))
+    }
+  }
+}
+
+function responseRequestList(set: Function, get: Function, requestsList: any) {
+  set((state) => ({
+    requestsList
+  }))
+}
+
+function responseRequestAccept(set: Function, get: Function, connection: any) {
+  const user = get().user
+
+  // If I was the one who accepted the request
+  // Remove the request from requestsList
+  if(user.account.id === connection.sender.id) {
+    const requestsList = [...get().requestsList]
+    const requestIndex = requestsList.findIndex(
+      request => request.id === connection.id
+    )
+    if(requestIndex >= 0 ) {
+      requestsList.splice(requestIndex, 1)
+      set((state) => ({
+        requestsList
+      }))
+    }
+  }
+
+}
+
 function responseThumbnail(set: Function, get: Function, data: Object) {
   set((state) => ({
     user: {
       account: data
     }
-  }))
+  }
+  ))
+
 }
 
 function responseSearch(set: Function, get: Function, data: Object) {
-  utils.log("response search data:", data)
   set((state) => ({
-    searchList: data
-  }))
-  set((state) => ({
-    user: {
-      account: data
-    }
+    searchList: data ? data : null
   }))
 }
 
@@ -106,6 +162,9 @@ const useGlobal = create<AuthState>((set, get) => ({
 
     socket.onopen = () => {
       utils.log('socket.open')
+      socket.send(JSON.stringify({
+        source: 'request-list'
+      }))
     }
 
     socket.onmessage = (event) => {
@@ -113,16 +172,18 @@ const useGlobal = create<AuthState>((set, get) => ({
       const parsed = JSON.parse(event.data)
       const responses: any = {
         'thumbnail': responseThumbnail,
-        'search': responseSearch
+        'search': responseSearch,
+        "request-connect": responseRequestConnect,
+        'request-list': responseRequestList,
+        'request-accept': responseRequestAccept
       }
       const resp = responses[parsed.source]
       if (!resp) {
-        utils.log('parsed source [ ', parsed.source, ' ]not found')
+        utils.log(`parsed source ['${parsed.source}']not found`)
         return
       }
       // Call responses function 
-      responseThumbnail(set, get, parsed.account)
-      responseSearch(set, get, parsed.users)
+      resp(set, get, parsed.data);
     }
 
     socket.onerror = () => {
@@ -169,6 +230,27 @@ const useGlobal = create<AuthState>((set, get) => ({
   },
 
   // -------------------------------------------------------- \\
+  //  Requests
+  // -------------------------------------------------------- \\
+  requestsList: null,
+
+  requestConnect: (id: number) => {
+    const socket = get().socket
+    socket?.send(JSON.stringify({
+      source: 'request-connect',
+      id
+    }))
+  },
+
+  requestAccept: (id: string) => {
+    const socket = get().socket
+    socket?.send(JSON.stringify({
+      source: 'request-accept',
+      id
+    }))
+  },
+
+  // -------------------------------------------------------- \\
   //  Thumbnail
   // -------------------------------------------------------- \\
   uploadThumbnail: (file) => {
@@ -180,13 +262,6 @@ const useGlobal = create<AuthState>((set, get) => ({
       filename: file.fileName
     }))
   },
-
-   // -------------------------------------------------------- \\
-  //  Thumbnail
-  // -------------------------------------------------------- \\
-  requestConnect: (id: number) => {
-    
-  }
 
 }));
 

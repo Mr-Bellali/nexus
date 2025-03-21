@@ -10,7 +10,6 @@ function ProfileImage() {
   const uploadThumbnail = useGlobal(state => state.uploadThumbnail)
   const user = useGlobal(state => state.user)
 
-  console.log("user-here: ", user)
 
   
 
@@ -19,7 +18,6 @@ function ProfileImage() {
       style={{ marginBottom: 20 }}
       onPress={() => {
         launchImageLibrary({ includeBase64: true} as ImageLibraryOptions, (response) => {
-          // utils.log('image library: ', response)
           if (response.didCancel) return
           if(response.assets === undefined) return
           const file = response.assets[0]

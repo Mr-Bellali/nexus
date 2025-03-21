@@ -8,7 +8,6 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core'
 import {
   TouchableOpacity,
   View,
-  Image
 } from 'react-native'
 import useGlobal from '../core/global'
 import Thumbnail from '../common/Thumbnail'
@@ -25,7 +24,6 @@ const HomeScreen = ({ navigation }: HomeProps) => {
   const socketConnect = useGlobal(state => state.socketConnect)
   const socketClose = useGlobal(state => state.socketClose)
   const user = useGlobal(state => state.user)
-  utils.log("user inside the Home.tsx",user)
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false

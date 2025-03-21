@@ -6,14 +6,14 @@ import { PrismaPg } from '@prisma/adapter-pg-worker'
 import { withAccelerate } from '@prisma/extension-accelerate';
 
 
-export function getPrismaClient(c: Context<{ Bindings: CloudflareBindings; }>) {
+export function getPrismaClient( env: CloudflareBindings) {
     // Create base client
     let baseClient: PrismaClient;
     let prisma;
   
     // If DATABASE_URL is available, use direct connection with Pool and PrismaPg adapter
-    if (c.env.DATABASE_URL) {
-      const connectionString = c.env.DATABASE_URL;
+    if (env.DATABASE_URL) {
+      const connectionString = env.DATABASE_URL;
       const pool = new Pool({ connectionString });
       const adapter = new PrismaPg(pool);
       baseClient = new PrismaClient({
@@ -31,7 +31,7 @@ export function getPrismaClient(c: Context<{ Bindings: CloudflareBindings; }>) {
       baseClient = new PrismaClient({
         datasources: {
           db: {
-            url: c.env.PROXY_URL,
+            url: env.PROXY_URL,
           },
         },
         transactionOptions: {

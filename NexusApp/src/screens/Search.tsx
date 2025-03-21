@@ -13,6 +13,7 @@ import Thumbnail from '../common/Thumbnail'
 import { User } from '../core/types'
 import useGlobal from '../core/global'
 import utils from '../core/utils'
+import Cell from '../common/Cell'
 
 interface SearchRowProps {
   user: User
@@ -20,18 +21,9 @@ interface SearchRowProps {
 
 
 function SearchRow({ user }: SearchRowProps) {
-  utils.log("SearchRow", user)
+  console.log("user-search: ", user)
   return (
-    <View
-      style={{
-        paddingHorizontal: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderColor: '#f0f0f0',
-        height: 106
-      }}
-    >
+   <Cell>
       <Thumbnail
         url={user.thumbnail as string}
         size={65}
@@ -60,7 +52,7 @@ function SearchRow({ user }: SearchRowProps) {
         </Text>
       </View>
       <SearchButton user={user} />
-    </View>
+    </ Cell>
   )
 }
 
@@ -149,34 +141,6 @@ const SearchScreen = () => {
     searcUsers(query)
   }, [query])
 
-  // const searchList: any = [
-  //   {
-  //     thumbnail: null,
-  //     name: 'Silly Name',
-  //     username: 'Sillyn',
-  //     status: 'pending-them'
-  //   },
-  //   {
-  //     thumbnail: null,
-  //     name: 'Silly Something',
-  //     username: 'Sillys',
-  //     status: 'pending-me'
-  //   },
-  //   {
-  //     thumbnail: null,
-  //     name: 'Silly Red',
-  //     username: 'Sillyr',
-  //     status: 'connected'
-  //   },
-  //   {
-  //     thumbnail: null,
-  //     name: 'Silly Blue',
-  //     username: 'Sillyb',
-  //     status: 'no-connection'
-  //   },
-  // ]
-
-
 
   return (
     <SafeAreaView
@@ -218,7 +182,7 @@ const SearchScreen = () => {
           />
         </View>
       </View>
-      {searchList === null ? (
+      {searchList === null || searchList ===  undefined ? (
         <Empty
           icon='magnifying-glass'
           message='Search for friends'
@@ -236,7 +200,7 @@ const SearchScreen = () => {
           renderItem={({ item }) => (
             <SearchRow user={item} />
           )}
-          keyExtractor={item => item.username}
+          keyExtractor={item => item.id.toString()}
         />
       )}
     </SafeAreaView>
