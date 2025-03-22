@@ -6,14 +6,15 @@ import { verifyJWT } from "./common/jwt";
 import { fileDetectFormat } from "./common/utils";
 import { MAX_MEDIA_SIZE } from "./common/helpers";
 import { getPrismaClient } from "./common/prisma";
-import { acceptConnection, createConnection, getRecieverConnections, getUser, searchUsers } from "./common/services";
+import { acceptConnection, createConnection, getConnections, getFriends, searchUsers } from "./common/services";
 
 export enum DataType {
     THUMBNAIL = "thumbnail",
     SEARCH = "search",
     REQUESTCONNECT = 'request-connect',
     REQUESTLIST = 'request-list',
-    REQUESTACCEPT = 'request-accept'
+    REQUESTACCEPT = 'request-accept',
+    FRIENDS = 'friends'
 }
 
 const webSocketDataSchema = z.object({
@@ -220,7 +221,7 @@ export class Chat {
                 break;
 
             case 'request-list':
-                const connections = await getRecieverConnections(this.env, senderAccountId);
+                const connections = await getConnections(this.env, senderAccountId);
                 console.log("connections: ", connections)
                 senderSocket[0].send(JSON.stringify({
                     source: "request-list",
@@ -244,6 +245,15 @@ export class Chat {
                     }))
                 }
                 console.log("accepter connection sent seccussfully 2!")
+                break;
+            
+            case 'friends': 
+                const friends = await getFriends(this.env, senderAccountId);
+                console.log("friends: ",friends)
+                ws.send(JSON.stringify({
+                    source: 'friends',
+                    data: friends
+                }))
                 break;
 
             default:

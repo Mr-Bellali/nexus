@@ -121,7 +121,7 @@ export async function createConnection(env: CloudflareBindings, senderId: number
     return connection
 }
 
-export async function getRecieverConnections(env: CloudflareBindings, receiverId: number) {
+export async function getConnections(env: CloudflareBindings, receiverId: number) {
     const prisma = getPrismaClient(env);
     const connections = await prisma.connection.findMany({
         where:{
@@ -187,4 +187,21 @@ export async function acceptConnection(env: CloudflareBindings, id: string) {
         }
     })
     return connection
+}
+
+export async function getFriends(env: CloudflareBindings, id: number) {
+    const prisma = getPrismaClient(env);
+    const friends = await prisma.account.findMany({
+        where : {
+            id
+        },
+        select: {
+            receivedConnections: {
+                where : {
+                    accepted: true
+                }
+            }
+        }
+    })
+    return friends
 }

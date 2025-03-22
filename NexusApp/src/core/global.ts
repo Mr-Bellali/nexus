@@ -49,20 +49,50 @@ function responseRequestList(set: Function, get: Function, requestsList: any) {
 
 function responseRequestAccept(set: Function, get: Function, connection: any) {
   const user = get().user
-
+  console.log("is  it working??")
   // If I was the one who accepted the request
   // Remove the request from requestsList
-  if(user.account.id === connection.sender.id) {
+  console.log("me: ", user.account.id)
+  console.log("me? ", connection.receiver.id)
+  if(user.account.id === connection.receiver.id) {
     const requestsList = [...get().requestsList]
+    utils.log("list before updating", requestsList)
     const requestIndex = requestsList.findIndex(
       request => request.id === connection.id
     )
     if(requestIndex >= 0 ) {
       requestsList.splice(requestIndex, 1)
+      utils.log("list after updating", requestsList)
       set((state) => ({
         requestsList
       }))
     }
+  }
+  // Update the state of the acceptence of the sender if he's connected
+  const sl = get().searchList
+  if (sl === null){
+    return
+  }
+  const searchList = [...sl]
+
+  console.log("search list: ", searchList)
+
+  let searchIndex = -1
+  if(user.account.id === connection.receiver.id){
+    searchIndex = searchList.findIndex(
+      user => user.id === connection.sender.id
+    )
+  }else {
+    searchIndex = searchList.findIndex(
+      user => user.id === connection.receiver.id
+    )
+  }
+
+  if(searchIndex >= 0) {
+    searchList[searchIndex].status = 'connected'
+    set((state) => ({
+      searchList
+    }))
   }
 
 }
@@ -82,6 +112,14 @@ function responseSearch(set: Function, get: Function, data: Object) {
     searchList: data ? data : null
   }))
 }
+
+function responseFriends(set: Function, get:Function, friendsList: Object){
+  console.log("friends: ", friendsList)
+  set((state) => ({
+    friendsList
+  }))
+}
+
 
 
 
@@ -165,6 +203,9 @@ const useGlobal = create<AuthState>((set, get) => ({
       socket.send(JSON.stringify({
         source: 'request-list'
       }))
+      socket.send(JSON.stringify({
+        source: 'friends'
+      }))
     }
 
     socket.onmessage = (event) => {
@@ -175,13 +216,16 @@ const useGlobal = create<AuthState>((set, get) => ({
         'search': responseSearch,
         "request-connect": responseRequestConnect,
         'request-list': responseRequestList,
-        'request-accept': responseRequestAccept
+        'request-accept': responseRequestAccept,
+        'friends': responseFriends,
       }
       const resp = responses[parsed.source]
       if (!resp) {
         utils.log(`parsed source ['${parsed.source}']not found`)
         return
       }
+      utils.log("parsed.source : ", parsed.source)
+      utils.log("parsed data: ", parsed)
       // Call responses function 
       resp(set, get, parsed.data);
     }
@@ -249,6 +293,8 @@ const useGlobal = create<AuthState>((set, get) => ({
       id
     }))
   },
+
+  friendsList: null,
 
   // -------------------------------------------------------- \\
   //  Thumbnail

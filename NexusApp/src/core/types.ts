@@ -14,7 +14,8 @@ export interface AuthState {
   initialized: Boolean;
   socket: WebSocket | null;
   searchList: User[] | null;
-  requestsList: any[] | null
+  requestsList: any[] | null;
+  friendsList: any[] | null;
   init: () => void;
   login: (user: any, credentials: any, token: any) => void;
   logout: () => void;
@@ -23,6 +24,7 @@ export interface AuthState {
   uploadThumbnail: (file: any) => void
   searchUsers: (query: string) => void
   requestAccept : (id: string) => void
+  
 }
 export type Credentials = {
   username: string;

@@ -1,5 +1,4 @@
 import { ActivityIndicator, FlatList, SafeAreaView, Text, TouchableOpacity, View } from 'react-native'
-import { User } from '../core/types'
 import Thumbnail from '../common/Thumbnail'
 import useGlobal from '../core/global'
 import Empty from '../common/Empty'
@@ -89,7 +88,6 @@ const RequestsScreen = () => {
       />
     )
   }
-
 
   // Show request list
   return (
