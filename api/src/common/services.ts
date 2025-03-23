@@ -191,17 +191,42 @@ export async function acceptConnection(env: CloudflareBindings, id: string) {
 
 export async function getFriends(env: CloudflareBindings, id: number) {
     const prisma = getPrismaClient(env);
-    const friends = await prisma.account.findMany({
-        where : {
-            id
+    const connections = await prisma.connection.findMany({
+        where:{
+            accepted: true,
+            OR: [
+                { senderId: id },
+                { receiverId: id }
+            ]
         },
         select: {
-            receivedConnections: {
-                where : {
-                    accepted: true
+            id: true,
+            sender: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
                 }
-            }
+            },
+            receiver: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            createdAt: true,
+            updatedAt: true
         }
     })
-    return friends
+    return connections.map(connection => ({
+        id: connection.id,
+        friend: connection.sender.id === id ? connection.receiver : connection.sender,
+        preview: "really cool message",  // Empty string as requested
+        updatedAt: connection.updatedAt
+    }));
 }

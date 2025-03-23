@@ -54,13 +54,13 @@ function responseRequestAccept(set: Function, get: Function, connection: any) {
   // Remove the request from requestsList
   console.log("me: ", user.account.id)
   console.log("me? ", connection.receiver.id)
-  if(user.account.id === connection.receiver.id) {
+  if (user.account.id === connection.receiver.id) {
     const requestsList = [...get().requestsList]
     utils.log("list before updating", requestsList)
     const requestIndex = requestsList.findIndex(
       request => request.id === connection.id
     )
-    if(requestIndex >= 0 ) {
+    if (requestIndex >= 0) {
       requestsList.splice(requestIndex, 1)
       utils.log("list after updating", requestsList)
       set((state) => ({
@@ -70,7 +70,7 @@ function responseRequestAccept(set: Function, get: Function, connection: any) {
   }
   // Update the state of the acceptence of the sender if he's connected
   const sl = get().searchList
-  if (sl === null){
+  if (sl === null) {
     return
   }
   const searchList = [...sl]
@@ -78,17 +78,17 @@ function responseRequestAccept(set: Function, get: Function, connection: any) {
   console.log("search list: ", searchList)
 
   let searchIndex = -1
-  if(user.account.id === connection.receiver.id){
+  if (user.account.id === connection.receiver.id) {
     searchIndex = searchList.findIndex(
       user => user.id === connection.sender.id
     )
-  }else {
+  } else {
     searchIndex = searchList.findIndex(
       user => user.id === connection.receiver.id
     )
   }
 
-  if(searchIndex >= 0) {
+  if (searchIndex >= 0) {
     searchList[searchIndex].status = 'connected'
     set((state) => ({
       searchList
@@ -113,7 +113,7 @@ function responseSearch(set: Function, get: Function, data: Object) {
   }))
 }
 
-function responseFriends(set: Function, get:Function, friendsList: Object){
+function responseFriends(set: Function, get: Function, friendsList: Object) {
   console.log("friends: ", friendsList)
   set((state) => ({
     friendsList
@@ -294,6 +294,9 @@ const useGlobal = create<AuthState>((set, get) => ({
     }))
   },
 
+  // -------------------------------------------------------- \\
+  //  Friends
+  // -------------------------------------------------------- \\
   friendsList: null,
 
   // -------------------------------------------------------- \\
