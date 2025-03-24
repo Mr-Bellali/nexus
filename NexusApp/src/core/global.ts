@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AuthState, Credentials } from './types';
+import { GlobalState, Credentials } from './types';
 import secure from './secure';
 import api, { ADDRESS } from './api';
 import utils from './utils';
@@ -120,10 +120,17 @@ function responseFriends(set: Function, get: Function, friendsList: Object) {
   }))
 }
 
+function responseMessagesList(set:Function, get: Function, data: any){
+  console.log("data.messages: ",data.messages)
+  set((state) => ({
+    messagesList: [...get().messagesList, ...data.messages]
+  }))
+}
 
 
 
-const useGlobal = create<AuthState>((set, get) => ({
+
+const useGlobal = create<GlobalState>((set, get) => ({
   // -------------------------------------------------------- \\
   //  Initialization
   // -------------------------------------------------------- \\
@@ -218,6 +225,7 @@ const useGlobal = create<AuthState>((set, get) => ({
         'request-list': responseRequestList,
         'request-accept': responseRequestAccept,
         'friends': responseFriends,
+        'messageslist': responseMessagesList,
       }
       const resp = responses[parsed.source]
       if (!resp) {
@@ -230,8 +238,9 @@ const useGlobal = create<AuthState>((set, get) => ({
       resp(set, get, parsed.data);
     }
 
-    socket.onerror = () => {
-      utils.log('socket.onError')
+    socket.onerror = (event: any) => {
+      const parsed = JSON.parse(event.error)
+      utils.log('socket.onError', parsed)
     }
 
     socket.onclose = () => {
@@ -298,6 +307,33 @@ const useGlobal = create<AuthState>((set, get) => ({
   //  Friends
   // -------------------------------------------------------- \\
   friendsList: null,
+
+  // -------------------------------------------------------- \\
+  //  Messages
+  // -------------------------------------------------------- \\
+  messagesList: [],
+  getMessagesList: (id, page = 0)=>{
+    if(page === 0) {
+      set((state) => ({
+        messagesList: []
+      }))
+    }
+    const socket = get().socket
+    socket?.send(JSON.stringify({
+      source: 'messageslist',
+      id,
+      page
+    }))
+  },
+  messageSend: (id, message)=>{
+    const socket = get().socket
+    socket?.send(JSON.stringify({
+      source: 'message',
+      type: 'text',
+      id,
+      content: message
+    }))
+  },
 
   // -------------------------------------------------------- \\
   //  Thumbnail

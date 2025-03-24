@@ -7,7 +7,7 @@ export interface User {
   status: string
 }
 
-export interface AuthState {
+export interface GlobalState {
   authenticated: boolean;
   credentials?: Record<string, any>;
   user: Record<string, any>;
@@ -16,6 +16,7 @@ export interface AuthState {
   searchList: User[] | null;
   requestsList: any[] | null;
   friendsList: any[] | null;
+  messagesList: any[] | null;
   init: () => void;
   login: (user: any, credentials: any, token: any) => void;
   logout: () => void;
@@ -24,7 +25,8 @@ export interface AuthState {
   uploadThumbnail: (file: any) => void
   searchUsers: (query: string) => void
   requestAccept : (id: string) => void
-  
+  messageSend: (id: string, message: string) => void
+  getMessagesList: (id: string, page? :number) => void
 }
 export type Credentials = {
   username: string;

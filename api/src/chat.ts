@@ -4,9 +4,9 @@ import { HTTPException } from "hono/http-exception";
 import { Context } from "hono";
 import { verifyJWT } from "./common/jwt";
 import { fileDetectFormat } from "./common/utils";
-import { MAX_MEDIA_SIZE } from "./common/helpers";
+import { broadcastMessage, MAX_MEDIA_SIZE } from "./common/helpers";
 import { getPrismaClient } from "./common/prisma";
-import { acceptConnection, createConnection, getConnections, getFriends, searchUsers } from "./common/services";
+import { acceptConnection, createConnection, createMessage, getConnectionParticipants, getConnections, getFriends, loadMessages, searchUsers } from "./common/services";
 
 export enum DataType {
     THUMBNAIL = "thumbnail",
@@ -14,7 +14,9 @@ export enum DataType {
     REQUESTCONNECT = 'request-connect',
     REQUESTLIST = 'request-list',
     REQUESTACCEPT = 'request-accept',
-    FRIENDS = 'friends'
+    FRIENDS = 'friends',
+    MESSAGE = 'message',
+    MESSAGESLIST = 'messageslist'
 }
 
 const webSocketDataSchema = z.object({
@@ -23,7 +25,8 @@ const webSocketDataSchema = z.object({
     filename: z.string().optional(),
     type: z.string().optional(),
     content: z.string().optional(),
-    id: z.any().optional()
+    id: z.any().optional(),
+    page: z.number().optional()
 })
 
 export class Chat {
@@ -35,6 +38,48 @@ export class Chat {
         this.state.setWebSocketAutoResponse(
             new WebSocketRequestResponsePair("ping", "pong")
         );
+    }
+
+    // Helpers functions
+    private async saveAndBroadcastTextMessage(
+        ws: WebSocket,
+        senderId: number,
+        connectionId: string,
+        content: string) {
+        try {
+            const message = await createMessage(
+                this.env,
+                senderId,
+                connectionId,
+                content,
+                'text'
+            )
+            if (!message) {
+                return ws.send(JSON.stringify({ error: "Failed to save the message, please try again" }));
+            }
+
+            const participants = await getConnectionParticipants(this.env, connectionId);
+            console.log('participants: ', participants)
+
+            let receiverSockets
+            let senderSockets
+            if (senderId === participants?.senderId) {
+                senderSockets = this.state.getWebSockets(`${senderId}`);
+                receiverSockets = this.state.getWebSockets(`${participants.receiverId}`)
+            } else if (senderId === participants?.receiverId) {
+                senderSockets = this.state.getWebSockets(`${participants.receiverId}`);
+                receiverSockets = this.state.getWebSockets(`${senderId}`)
+            }
+            console.log('sender: ', senderSockets);
+            console.log('receiver: ', receiverSockets)
+
+            // broadcast the message
+            await broadcastMessage(senderSockets as WebSocket[], receiverSockets as WebSocket[], message)
+
+        } catch (error) {
+            console.error("Error occurred:", error);
+            ws.close(1011, JSON.stringify({ code: 500, error: "Internal server error." }));
+        }
     }
 
     // Function to get the account ID from the websocket
@@ -92,12 +137,12 @@ export class Chat {
             })
         }
 
-        const { source, base64, type, content, id } = validateSocketData.data;
+        const { source, base64, type, content, id, page } = validateSocketData.data;
 
         console.log("source: ", source)
 
         switch (source) {
-            case 'thumbnail':
+            case DataType.THUMBNAIL:
                 switch (type) {
                     case 'upload':
                         if (!base64) {
@@ -179,7 +224,7 @@ export class Chat {
 
                 break;
 
-            case 'search':
+            case DataType.SEARCH:
                 console.log("inside search!!")
                 // console.log("users: ", await searchUsers(this.env, content as string, senderAccountId))
                 const users = await searchUsers(this.env, content as string, senderAccountId);
@@ -190,7 +235,7 @@ export class Chat {
                 }))
                 break
 
-            case 'request-connect':
+            case DataType.REQUESTCONNECT:
                 // Get the requested user
                 if (!id) {
                     return ws.send(JSON.stringify({
@@ -210,7 +255,7 @@ export class Chat {
                 }))
 
                 // Brodcast to the reciever
-                 recieverSockets = this.state.getWebSockets(`${id}`);
+                recieverSockets = this.state.getWebSockets(`${id}`);
                 for (const socket of recieverSockets) {
                     socket.send(JSON.stringify({
                         source: "request-connect",
@@ -220,7 +265,7 @@ export class Chat {
 
                 break;
 
-            case 'request-list':
+            case DataType.REQUESTLIST:
                 const connections = await getConnections(this.env, senderAccountId);
                 console.log("connections: ", connections)
                 senderSocket[0].send(JSON.stringify({
@@ -229,9 +274,9 @@ export class Chat {
                 }))
                 break;
 
-            case 'request-accept':
-                const acceptedConnection = await acceptConnection(this.env, id)       
-                console.log("accepted connection: ", acceptedConnection)         
+            case DataType.REQUESTACCEPT:
+                const acceptedConnection = await acceptConnection(this.env, id)
+                console.log("accepted connection: ", acceptedConnection)
                 senderSocket[0].send(JSON.stringify({
                     source: "request-accept",
                     data: acceptedConnection
@@ -246,16 +291,49 @@ export class Chat {
                 }
                 console.log("accepter connection sent seccussfully 2!")
                 break;
-            
-            case 'friends': 
+
+            case DataType.FRIENDS:
                 const friends = await getFriends(this.env, senderAccountId);
-                console.log("friends: ",friends)
+                console.log("friends: ", friends)
                 ws.send(JSON.stringify({
                     source: 'friends',
                     data: friends
                 }))
                 break;
 
+            case DataType.MESSAGE:
+                // Handle text messages
+                if (type === 'text') {
+                    console.log('content: ', content);
+                    console.log('id: ', id)
+                    if (!content) {
+                        return ws.send(JSON.stringify({ error: "Can't send an empty message" }));
+                    }
+
+                    await this.saveAndBroadcastTextMessage(
+                        ws,
+                        senderAccountId,
+                        id,
+                        content
+                    )
+
+                    // Handle media type messages
+                } else {
+
+                }
+                break;
+
+            case DataType.MESSAGESLIST:
+                let messages
+                if (!page || page === 0) messages = await loadMessages(this.env, id, 1)
+                else messages = await loadMessages(this.env, id, page)
+
+                console.log("messages: ", messages, "for the page: ", page)
+                ws.send(JSON.stringify({
+                    source: 'messageslist',
+                    data: messages
+                }))
+                break;
             default:
                 break;
         }

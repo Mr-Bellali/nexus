@@ -2,6 +2,7 @@ import { Context } from 'hono';
 import { CloudflareBindings } from './cloudflare';
 import { getPrismaClient } from './prisma';
 
+const PAGE_SIZE = 25
 
 export async function searchUsers(env: CloudflareBindings, query: string, id: number) {
     const prisma = getPrismaClient(env);
@@ -124,7 +125,7 @@ export async function createConnection(env: CloudflareBindings, senderId: number
 export async function getConnections(env: CloudflareBindings, receiverId: number) {
     const prisma = getPrismaClient(env);
     const connections = await prisma.connection.findMany({
-        where:{
+        where: {
             receiverId,
             accepted: false
         },
@@ -192,7 +193,7 @@ export async function acceptConnection(env: CloudflareBindings, id: string) {
 export async function getFriends(env: CloudflareBindings, id: number) {
     const prisma = getPrismaClient(env);
     const connections = await prisma.connection.findMany({
-        where:{
+        where: {
             accepted: true,
             OR: [
                 { senderId: id },
@@ -229,4 +230,61 @@ export async function getFriends(env: CloudflareBindings, id: number) {
         preview: "really cool message",  // Empty string as requested
         updatedAt: connection.updatedAt
     }));
+}
+
+export async function createMessage(
+    env: CloudflareBindings,
+    senderId: number,
+    connectionId: string,
+    content: string,
+    messageType: "text" | "media",
+    fileName?: string,
+    mimeType?: string) {
+
+    const prisma = getPrismaClient(env);
+    let message = prisma.message.create({
+        data: {
+            content,
+            type: messageType,
+            connectionId,
+            accountId: senderId,
+            fileName,
+            mimeType
+        }
+    })
+    return message
+}
+
+export async function getConnectionParticipants(env: CloudflareBindings, id: string) {
+    const prisma = getPrismaClient(env);
+    const connectionParticipants = await prisma.connection.findFirst({
+        where: {
+            id
+        },
+        select : {
+            receiverId: true,
+            senderId: true
+        }
+    })
+    return connectionParticipants
+}
+
+export async function loadMessages(env: CloudflareBindings, id: string, page=1){
+    const prisma = getPrismaClient(env);
+    const messages = await prisma.connection.findFirst({
+        where:{
+            id
+        },
+        
+        select:{
+            messages: {
+                orderBy: { createdAt: "desc" },
+                skip: (page - 1) * PAGE_SIZE,
+                take: PAGE_SIZE,
+            },
+            
+        }
+    })
+
+    return messages
 }

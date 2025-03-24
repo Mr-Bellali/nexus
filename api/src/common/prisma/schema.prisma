@@ -50,6 +50,15 @@ model Message {
   connectionId String
   account      Account    @relation(fields: [accountId], references: [id])
   accountId    Int
-  text         String
+  content         String
+  type MessageType
+  fileName  String?
+  mimeType String?
   createdAt    DateTime   @default(now())
+  isSeen      Boolean @default(false)
+}
+
+enum MessageType {
+  text
+  media
 }
