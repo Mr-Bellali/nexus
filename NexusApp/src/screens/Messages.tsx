@@ -1,5 +1,5 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react'
-import { FlatList, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Animated, Easing, FlatList, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import Thumbnail from '../common/Thumbnail'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import useGlobal from '../core/global'
@@ -29,8 +29,13 @@ interface MessageBubbleMeProps {
   content: any,
 }
 interface MessageBubbleFriendProps {
-  friend: any,
+  friend?: any,
   content: any,
+  typing: boolean,
+}
+
+interface MessageTypingAnimationProps {
+  offset: number
 }
 
 function MessageHeader({ friend }: HeaderProps) {
@@ -65,14 +70,17 @@ function MessageBubbleMe({ content }: MessageBubbleMeProps) {
     <View
       style={{
         flexDirection: 'row',
-        padding: 4
+        padding: 4,
+        paddingRight: 16
       }}
     >
       <View style={{ flex: 1 }} />
       <View
         style={{
           backgroundColor: '#303040',
-          borderRadius: 21,
+          borderTopRightRadius: 15,
+          borderTopLeftRadius: 15,
+          borderBottomLeftRadius: 15,
           maxWidth: '75%',
           paddingHorizontal: 16,
           paddingVertical: 12,
@@ -94,22 +102,74 @@ function MessageBubbleMe({ content }: MessageBubbleMeProps) {
     </View>
   )
 }
-function MessageBubbleFriend({ content, friend }: MessageBubbleFriendProps) {
+
+function MessageTypingAnimation({ offset }: MessageTypingAnimationProps) {
+  const y = useRef(new Animated.Value(0)).current
+
+  useEffect(()=>{
+    const total = 1000
+    const bump = 200
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(bump * offset),
+        Animated.timing(y, {
+          toValue: 1,
+          duration: bump,
+          easing: Easing.linear,
+          useNativeDriver: true
+        }),
+        Animated.timing(y, {
+          toValue: 0,
+          duration: bump,
+          easing: Easing.linear,
+          useNativeDriver: true
+        }),
+        Animated.delay(total - bump * 2 - bump * offset),
+      ]),
+    )
+    animation.start()
+    return () => {
+      animation.stop()
+    }
+  }, [])
+
+  const translateY = y.interpolate({
+    inputRange: [0,1],
+    outputRange: [0, -8]
+  })
+
+  return(
+    <Animated.View
+      style={{
+        width: 8,
+        height: 8,
+        marginHorizontal: 1.5,
+        borderRadius: 4,
+        backgroundColor: '#606060',
+        transform: [{ translateY }]
+      }}
+    >
+
+    </Animated.View>
+  )
+}
+
+function MessageBubbleFriend({ content = '', friend, typing = false }: MessageBubbleFriendProps) {
+  console.log("typing: ", typing)
   return (
     <View
       style={{
         flexDirection: 'row',
-        padding: 4
+        padding: 4,
+        paddingLeft: 16
       }}
     >
-      <Thumbnail
-        url={friend.thumbnail}
-        size={42}
-      />
       <View
         style={{
           backgroundColor: '#d0d2db',
-          borderRadius: 21,
+          borderTopRightRadius: 15,
+          borderTopLeftRadius: 15,
+          borderBottomRightRadius: 15,
           maxWidth: '75%',
           paddingHorizontal: 16,
           paddingVertical: 12,
@@ -118,26 +178,61 @@ function MessageBubbleFriend({ content, friend }: MessageBubbleFriendProps) {
           minHeight: 42
         }}
       >
-        <Text
-          style={{
-            color: '#202020',
-            fontSize: 16,
-            lineHeight: 18
-          }}
-        >
-          {content}
-        </Text>
+        {typing ? (
+          <View style={{ flexDirection: 'row' }}>
+            <MessageTypingAnimation offset={0} />
+            <MessageTypingAnimation offset={1} />
+            <MessageTypingAnimation offset={2} />
+          </View>
+        ) : (
+          <Text
+            style={{
+              color: '#202020',
+              fontSize: 16,
+              lineHeight: 18
+            }}
+          >
+            {content}
+          </Text>
+        )}
+
       </View>
       <View style={{ flex: 1 }} />
-    </View>
+    </View >
   )
 }
 
-
-
 function MessageBubble({ index, message, user, friend }: MessageBubbleProps) {
-  // if it's my message
-  console.log("user: ", user)
+
+  const [showTyping, setShowTyping] = useState(false)
+
+	const messagesTyping = useGlobal(state => state.messagesTyping)
+
+	useEffect(() => {
+		if (index !== 0) return
+		if (messagesTyping === null) {
+			setShowTyping(false)
+			return
+		}
+		setShowTyping(true)
+		const check = setInterval(() => {
+			const now = new Date()
+			const ms = now - messagesTyping
+			if (ms > 2000) {
+				setShowTyping(false)
+			}
+		}, 1000)
+		return () => clearInterval(check)
+	}, [messagesTyping])
+
+
+	if (index === 0) {
+		if (showTyping) {
+			return <MessageBubbleFriend content={message.content} friend={friend} typing={true} />
+		}
+		return
+	}
+
   return user.account.id === message.accountId ? (
     <MessageBubbleMe
       content={message.content}
@@ -147,6 +242,7 @@ function MessageBubble({ index, message, user, friend }: MessageBubbleProps) {
     <MessageBubbleFriend
       content={message.content}
       friend={friend}
+      typing={false}
     />
   )
 }
@@ -199,6 +295,8 @@ const MessagesScreen = ({ navigation, route }: MessagesProps) => {
   const messagesList = useGlobal(state => state.messagesList)
   const getMessages = useGlobal(state => state.getMessagesList)
   const messageSend = useGlobal(state => state.messageSend)
+  const typingMessage = useGlobal(state => state.typingMessage)
+
   const user = useGlobal(state => state.user)
 
   const friend = route.params.friend
@@ -224,42 +322,32 @@ const MessagesScreen = ({ navigation, route }: MessagesProps) => {
     setMessage('')
   }
 
+  function onType(value: any) {
+    setMessage(value)
+    typingMessage(friend.id)
+  }
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/* KeyboardAvoidingView to make input move with keyboard */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 70}
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <View
-            style={{
-              flex: 1,
-              borderWidth: 6,
-              borderColor: 'red'
-            }}
-          >
-            <FlatList
-              data={messagesList}
-              inverted={true}
-              keyExtractor={item => item.id}
-              renderItem={({ item, index }) => (
-                <MessageBubble
-                  index={index}
-                  message={item}
-                  friend={friend}
-                  user={user}
-                />
-              )}
-            />
-          </View>
-        </ScrollView>
-        <MessageInput
-          message={message}
-          setMessage={setMessage}
-          onSend={onSend}
+        <FlatList
+          style={{
+            marginBottom: 26
+          }}
+          data= {messagesList}
+          // {[{ id: -1 }, ...messagesList as any[]]}
+          inverted={true}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item, index }) => (
+            <MessageBubble index={index} message={item} friend={friend} user={user} />
+          )}
+          contentContainerStyle={{ flexGrow: 1 }}
         />
+        <MessageInput message={message} setMessage={onType} onSend={onSend} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

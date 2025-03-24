@@ -16,46 +16,47 @@ datasource db {
 }
 
 model Account {
-  id             Int          @id @default(autoincrement())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  username       String       @unique @db.VarChar(13)
+  id             Int      @id @default(autoincrement())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  username       String   @unique @db.VarChar(13)
   firstName      String
   lastName       String
   hashedPassword String
-  thumbnail      String?      @unique
+  thumbnail      String?  @unique
   mimeType       String?
 
-  sentConnections    Connection[] @relation("SentConnections")
+  sentConnections     Connection[] @relation("SentConnections")
   receivedConnections Connection[] @relation("ReceivedConnections")
-  messages           Message[]
+  messages            Message[]
 }
 
 model Connection {
-  id         String    @id @default(uuid())
-  sender     Account   @relation("SentConnections", fields: [senderId], references: [id])
+  id         String   @id @default(uuid())
+  sender     Account  @relation("SentConnections", fields: [senderId], references: [id])
   senderId   Int
-  receiver   Account   @relation("ReceivedConnections", fields: [receiverId], references: [id])
+  receiver   Account  @relation("ReceivedConnections", fields: [receiverId], references: [id])
   receiverId Int
-  accepted   Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  accepted   Boolean  @default(false)
+  preview    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  messages   Message[]
+  messages Message[]
 }
 
 model Message {
-  id           String     @id @default(uuid())
-  connection   Connection @relation(fields: [connectionId], references: [id])
+  id           String      @id @default(uuid())
+  connection   Connection  @relation(fields: [connectionId], references: [id])
   connectionId String
-  account      Account    @relation(fields: [accountId], references: [id])
+  account      Account     @relation(fields: [accountId], references: [id])
   accountId    Int
-  content         String
-  type MessageType
-  fileName  String?
-  mimeType String?
-  createdAt    DateTime   @default(now())
-  isSeen      Boolean @default(false)
+  content      String
+  type         MessageType
+  fileName     String?
+  mimeType     String?
+  createdAt    DateTime    @default(now())
+  isSeen       Boolean     @default(false)
 }
 
 enum MessageType {

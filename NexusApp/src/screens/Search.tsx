@@ -21,7 +21,6 @@ interface SearchRowProps {
 
 
 function SearchRow({ user }: SearchRowProps) {
-  console.log("user-search: ", user)
   return (
    <Cell>
       <Thumbnail

@@ -6,7 +6,7 @@ import { verifyJWT } from "./common/jwt";
 import { fileDetectFormat } from "./common/utils";
 import { broadcastMessage, MAX_MEDIA_SIZE } from "./common/helpers";
 import { getPrismaClient } from "./common/prisma";
-import { acceptConnection, createConnection, createMessage, getConnectionParticipants, getConnections, getFriends, loadMessages, searchUsers } from "./common/services";
+import { acceptConnection, createConnection, createMessage, getConnection, getConnectionParticipants, getConnections, getFriends, loadMessages, searchUsers } from "./common/services";
 
 export enum DataType {
     THUMBNAIL = "thumbnail",
@@ -16,7 +16,8 @@ export enum DataType {
     REQUESTACCEPT = 'request-accept',
     FRIENDS = 'friends',
     MESSAGE = 'message',
-    MESSAGESLIST = 'messageslist'
+    MESSAGESLIST = 'messageslist',
+    TYPINGMESSAGE = 'typing-message'
 }
 
 const webSocketDataSchema = z.object({
@@ -60,21 +61,32 @@ export class Chat {
 
             const participants = await getConnectionParticipants(this.env, connectionId);
             console.log('participants: ', participants)
+            console.log('sender Id: ', senderId)
+            console.log('participent sender Id: ', participants?.senderId)
+            console.log('participent receiver Id: ', participants?.receiverId)
 
             let receiverSockets
             let senderSockets
             if (senderId === participants?.senderId) {
                 senderSockets = this.state.getWebSockets(`${senderId}`);
                 receiverSockets = this.state.getWebSockets(`${participants.receiverId}`)
-            } else if (senderId === participants?.receiverId) {
-                senderSockets = this.state.getWebSockets(`${participants.receiverId}`);
-                receiverSockets = this.state.getWebSockets(`${senderId}`)
             }
-            console.log('sender: ', senderSockets);
-            console.log('receiver: ', receiverSockets)
+            if (senderId === participants?.receiverId) {
+                senderSockets = this.state.getWebSockets(`${senderId}`);
+                receiverSockets = this.state.getWebSockets(`${participants?.senderId}`)
+            }
+            // console.log('sender: ', senderSockets);
+            // console.log('receiver: ', receiverSockets)
 
             // broadcast the message
-            await broadcastMessage(senderSockets as WebSocket[], receiverSockets as WebSocket[], message)
+            await broadcastMessage(
+                this.env,
+                senderSockets as WebSocket[],
+                receiverSockets as WebSocket[],
+                message,
+                senderId,
+                participants,
+            )
 
         } catch (error) {
             console.error("Error occurred:", error);
@@ -105,9 +117,9 @@ export class Chat {
         let payload;
         try {
             payload = await verifyJWT(token, this.env.JWT_SECRET_KEY)
-            console.log("payload: ", payload)
+            // console.log("payload: ", payload)
         } catch (error: any) {
-            console.error("jwt verification error: ", error.message);
+            // console.error("jwt verification error: ", error.message);
             return new Response(null, { status: 401, statusText: 'Invalid JWT token' });
         }
 
@@ -129,7 +141,7 @@ export class Chat {
 
         // Validate the recieved websocket data
         const parsedData = JSON.parse(data);
-        console.log("incoming: ", parsedData)
+        // console.log("incoming: ", parsedData)
         const validateSocketData = webSocketDataSchema.safeParse(parsedData);
         if (!validateSocketData.success) {
             return JSON.stringify({
@@ -139,7 +151,7 @@ export class Chat {
 
         const { source, base64, type, content, id, page } = validateSocketData.data;
 
-        console.log("source: ", source)
+        // console.log("source: ", source)
 
         switch (source) {
             case DataType.THUMBNAIL:
@@ -225,10 +237,10 @@ export class Chat {
                 break;
 
             case DataType.SEARCH:
-                console.log("inside search!!")
+                // console.log("inside search!!")
                 // console.log("users: ", await searchUsers(this.env, content as string, senderAccountId))
                 const users = await searchUsers(this.env, content as string, senderAccountId);
-                console.log("users-- ", users)
+                // console.log("users-- ", users)
                 ws.send(JSON.stringify({
                     source: "search",
                     data: users
@@ -267,7 +279,7 @@ export class Chat {
 
             case DataType.REQUESTLIST:
                 const connections = await getConnections(this.env, senderAccountId);
-                console.log("connections: ", connections)
+                // console.log("connections: ", connections)
                 senderSocket[0].send(JSON.stringify({
                     source: "request-list",
                     data: connections
@@ -276,20 +288,45 @@ export class Chat {
 
             case DataType.REQUESTACCEPT:
                 const acceptedConnection = await acceptConnection(this.env, id)
-                console.log("accepted connection: ", acceptedConnection)
+                // console.log("accepted connection: ", acceptedConnection)
+
+                const participants = await getConnectionParticipants(this.env, acceptedConnection.id);
+                let receiverFriendId
+                let senderFriendId
+                if (senderAccountId === participants?.senderId) {
+                    senderFriendId = senderAccountId
+                    receiverFriendId = participants?.receiverId
+                }
+                if (senderAccountId === participants?.receiverId) {
+                    senderFriendId = participants?.receiverId
+                    receiverFriendId = participants?.senderId
+                }
+
+                // Get friend
+                const senderFriend = await getConnection(this.env, acceptedConnection.id, receiverFriendId as number)
+                const recieverFriend = await getConnection(this.env, acceptedConnection.id, senderFriendId as number)
+
                 senderSocket[0].send(JSON.stringify({
                     source: "request-accept",
                     data: acceptedConnection
                 }))
-                console.log("accepter connection sent seccussfully 1!")
+
+                senderSocket[0].send(JSON.stringify({
+                    source: 'new-friend',
+                    data: recieverFriend
+                }))
+
                 recieverSockets = this.state.getWebSockets(`${acceptedConnection.sender.id}`);
                 for (const socket of recieverSockets) {
                     socket.send(JSON.stringify({
                         source: "request-accept",
                         data: acceptedConnection
                     }))
+                    socket.send(JSON.stringify({
+                        source: 'new-friend',
+                        data: senderFriend
+                    }))
                 }
-                console.log("accepter connection sent seccussfully 2!")
                 break;
 
             case DataType.FRIENDS:
@@ -304,8 +341,8 @@ export class Chat {
             case DataType.MESSAGE:
                 // Handle text messages
                 if (type === 'text') {
-                    console.log('content: ', content);
-                    console.log('id: ', id)
+                    // console.log('content: ', content);
+                    // console.log('id: ', id)
                     if (!content) {
                         return ws.send(JSON.stringify({ error: "Can't send an empty message" }));
                     }
@@ -328,11 +365,25 @@ export class Chat {
                 if (!page || page === 0) messages = await loadMessages(this.env, id, 1)
                 else messages = await loadMessages(this.env, id, page)
 
-                console.log("messages: ", messages, "for the page: ", page)
+                // console.log("messages: ", messages, "for the page: ", page)
                 ws.send(JSON.stringify({
                     source: 'messageslist',
                     data: messages
                 }))
+                break;
+
+            case DataType.TYPINGMESSAGE:
+                console.log(senderAccountId , " is typing ");
+                console.log("and ", id, " will be notified when ", senderAccountId, "is typing") 
+                recieverSockets = this.state.getWebSockets(`${id}`);
+                for(const socket of recieverSockets) {
+                    socket.send(JSON.stringify({
+                        source: 'typing-message',
+                        data: {
+                            senderId: senderAccountId
+                        }
+                    }))
+                }
                 break;
             default:
                 break;

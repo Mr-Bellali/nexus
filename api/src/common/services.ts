@@ -59,7 +59,7 @@ export async function searchUsers(env: CloudflareBindings, query: string, id: nu
         }
     })
 
-    console.log("users with status: ", enhancedUsers);
+    // console.log("users with status: ", enhancedUsers);
     return enhancedUsers;
 
 }
@@ -221,13 +221,14 @@ export async function getFriends(env: CloudflareBindings, id: number) {
                 }
             },
             createdAt: true,
-            updatedAt: true
+            updatedAt: true,
+            preview: true
         }
     })
     return connections.map(connection => ({
         id: connection.id,
         friend: connection.sender.id === id ? connection.receiver : connection.sender,
-        preview: "really cool message",  // Empty string as requested
+        preview: connection.preview ? connection.preview : 'Say hi 👋',  // Empty string as requested
         updatedAt: connection.updatedAt
     }));
 }
@@ -252,6 +253,14 @@ export async function createMessage(
             mimeType
         }
     })
+    await prisma.connection.update({
+        where: {
+            id: connectionId
+        },
+        data: {
+            preview: (await message).type == 'text' ? content : 'media received'
+        }
+    })
     return message
 }
 
@@ -261,7 +270,7 @@ export async function getConnectionParticipants(env: CloudflareBindings, id: str
         where: {
             id
         },
-        select : {
+        select: {
             receiverId: true,
             senderId: true
         }
@@ -269,22 +278,67 @@ export async function getConnectionParticipants(env: CloudflareBindings, id: str
     return connectionParticipants
 }
 
-export async function loadMessages(env: CloudflareBindings, id: string, page=1){
+export async function loadMessages(env: CloudflareBindings, id: string, page = 1) {
     const prisma = getPrismaClient(env);
     const messages = await prisma.connection.findFirst({
-        where:{
+        where: {
             id
         },
-        
-        select:{
+
+        select: {
             messages: {
                 orderBy: { createdAt: "desc" },
                 skip: (page - 1) * PAGE_SIZE,
                 take: PAGE_SIZE,
             },
-            
+
         }
     })
 
     return messages
+}
+
+export async function getConnection(env: CloudflareBindings, id: string, friendId: number) {
+    const prisma = getPrismaClient(env);
+    const connection = await prisma.connection.findFirst({
+        where: {
+            id,
+            OR: [
+                { senderId: friendId },
+                { receiverId: friendId }
+            ]
+        },
+        select: {
+            id: true,
+            sender: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            receiver: {
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    thumbnail: true
+                }
+            },
+            createdAt: true,
+            updatedAt: true,
+            preview: true
+        }
+    });
+    if (!connection) return null;
+
+    return {
+        id: connection.id,
+        friend: connection.sender.id === friendId ? connection.receiver : connection.sender,
+        preview: connection.preview ? connection.preview : 'Say hi 👋',
+        updatedAt: connection.updatedAt
+    };
 }

@@ -13,14 +13,12 @@ function responseRequestConnect(set: Function, get: Function, connection: any) {
 
   // If the one who's sending the request
   // Update the search list row
-  console.log("user: ", user.account)
-  console.log("connection id: ", connection.sender.id)
+
   if (user.account.id === connection.sender.id) {
     const searchList = [...get().searchList]
     const searchIndex = searchList.findIndex(
       request => request.id === connection.receiver.id
     )
-    console.log("search index: ", searchIndex)
     if (searchIndex >= 0) {
       searchList[searchIndex].status = 'pending-them'
       set((state) => ({
@@ -49,20 +47,15 @@ function responseRequestList(set: Function, get: Function, requestsList: any) {
 
 function responseRequestAccept(set: Function, get: Function, connection: any) {
   const user = get().user
-  console.log("is  it working??")
   // If I was the one who accepted the request
   // Remove the request from requestsList
-  console.log("me: ", user.account.id)
-  console.log("me? ", connection.receiver.id)
   if (user.account.id === connection.receiver.id) {
     const requestsList = [...get().requestsList]
-    utils.log("list before updating", requestsList)
     const requestIndex = requestsList.findIndex(
       request => request.id === connection.id
     )
     if (requestIndex >= 0) {
       requestsList.splice(requestIndex, 1)
-      utils.log("list after updating", requestsList)
       set((state) => ({
         requestsList
       }))
@@ -75,7 +68,6 @@ function responseRequestAccept(set: Function, get: Function, connection: any) {
   }
   const searchList = [...sl]
 
-  console.log("search list: ", searchList)
 
   let searchIndex = -1
   if (user.account.id === connection.receiver.id) {
@@ -114,21 +106,66 @@ function responseSearch(set: Function, get: Function, data: Object) {
 }
 
 function responseFriends(set: Function, get: Function, friendsList: Object) {
-  console.log("friends: ", friendsList)
   set((state) => ({
     friendsList
   }))
 }
 
-function responseMessagesList(set:Function, get: Function, data: any){
-  console.log("data.messages: ",data.messages)
+function responseNewFriend(set: Function, get: Function, friend: Object) {
+  const friendsList = [friend, ...get().friendsList]
   set((state) => ({
-    messagesList: [...get().messagesList, ...data.messages]
+    friendsList
   }))
 }
 
+function responseMessagesList(set: Function, get: Function, data: any) {
+  set((state) => ({
+    messagesList: [...get().messagesList, ...data.messages],
+    // messagesId: data.friend.id
+  }))
+}
+
+function responseMessage(set: Function, get: Function, data: any) {
+  const friendId = data.friend.friend.id
+  const friendsList = [...get().friendsList]
+  const friendIndex = friendsList.findIndex(
+    item => item.friend.id === friendId
+  )
+  console.log("friend id: ", friendId)
+  console.log("friend index: ", friendIndex)
+  if (friendIndex >= 0) {
+    const item = friendsList[friendIndex]
+    console.log("item: ", item)
+    item.preview = data.friend.preview
+    item.updatedAt = data.friend.updatedAt
+    friendsList.splice(friendIndex, 1)
+    friendsList.unshift(item)
+    console.log("unshift", friendsList.unshift(item))
+    set((state) => ({
+      friendsList
+    }))
+    console.log("new friendlist: ", friendsList)
+  }
+  if (friendId !== get().messagesId) {
+    return
+  }
 
 
+  const messagesList = [data.message, ...get().messagesList]
+  set((state) => ({
+    messagesList
+  }))
+}
+
+function responseTypingMessage(set: Function, get: Function, data: any){
+  console.log("reciever id: ", data.senderId)
+  console.log("my id: ", get().user.account.id)
+  if(data.receiverId === get().messagesId) return
+  set((state) => ({
+    messagesTyping: new Date()
+  }))
+  console.log("inside global: ", get().messagesTyping)
+}
 
 const useGlobal = create<GlobalState>((set, get) => ({
   // -------------------------------------------------------- \\
@@ -226,6 +263,9 @@ const useGlobal = create<GlobalState>((set, get) => ({
         'request-accept': responseRequestAccept,
         'friends': responseFriends,
         'messageslist': responseMessagesList,
+        'message': responseMessage,
+        'new-friend': responseNewFriend,
+        'typing-message': responseTypingMessage
       }
       const resp = responses[parsed.source]
       if (!resp) {
@@ -234,13 +274,14 @@ const useGlobal = create<GlobalState>((set, get) => ({
       }
       utils.log("parsed.source : ", parsed.source)
       utils.log("parsed data: ", parsed)
+
       // Call responses function 
       resp(set, get, parsed.data);
     }
 
     socket.onerror = (event: any) => {
       const parsed = JSON.parse(event.error)
-      utils.log('socket.onError', parsed)
+      console.error('socket.onError', parsed)
     }
 
     socket.onclose = () => {
@@ -312,10 +353,15 @@ const useGlobal = create<GlobalState>((set, get) => ({
   //  Messages
   // -------------------------------------------------------- \\
   messagesList: [],
-  getMessagesList: (id, page = 0)=>{
-    if(page === 0) {
+  messagesId: null,
+  messagesTyping: null,
+
+  getMessagesList: (id, page = 0) => {
+    if (page === 0) {
       set((state) => ({
-        messagesList: []
+        messagesList: [],
+        messagesId: null,
+        messagesTyping: null,
       }))
     }
     const socket = get().socket
@@ -325,13 +371,20 @@ const useGlobal = create<GlobalState>((set, get) => ({
       page
     }))
   },
-  messageSend: (id, message)=>{
+  messageSend: (id, message) => {
     const socket = get().socket
     socket?.send(JSON.stringify({
       source: 'message',
       type: 'text',
       id,
       content: message
+    }))
+  },
+  typingMessage: (id) => {
+    const socket = get().socket
+    socket?.send(JSON.stringify({
+      source: 'typing-message',
+      id,
     }))
   },
 

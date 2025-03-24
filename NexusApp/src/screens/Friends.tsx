@@ -66,7 +66,6 @@ function formatTime(date: Date | string | null) {
 
 
 function FriendRow({ navigation, item }: FriendsProps) {
-  console.log("item in friends: ", item)
   return (
     <TouchableOpacity
       onPress={()=>{
