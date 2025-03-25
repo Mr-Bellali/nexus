@@ -106,7 +106,7 @@ function MessageBubbleMe({ content }: MessageBubbleMeProps) {
 function MessageTypingAnimation({ offset }: MessageTypingAnimationProps) {
   const y = useRef(new Animated.Value(0)).current
 
-  useEffect(()=>{
+  useEffect(() => {
     const total = 1000
     const bump = 200
     const animation = Animated.loop(
@@ -134,11 +134,11 @@ function MessageTypingAnimation({ offset }: MessageTypingAnimationProps) {
   }, [])
 
   const translateY = y.interpolate({
-    inputRange: [0,1],
+    inputRange: [0, 1],
     outputRange: [0, -8]
   })
 
-  return(
+  return (
     <Animated.View
       style={{
         width: 8,
@@ -164,27 +164,32 @@ function MessageBubbleFriend({ content = '', friend, typing = false }: MessageBu
         paddingLeft: 16
       }}
     >
-      <View
-        style={{
-          backgroundColor: '#d0d2db',
-          borderTopRightRadius: 15,
-          borderTopLeftRadius: 15,
-          borderBottomRightRadius: 15,
-          maxWidth: '75%',
+
+      {typing ? (
+        <View style={{
+          flexDirection: 'row',
           paddingHorizontal: 16,
-          paddingVertical: 12,
-          justifyContent: 'center',
-          marginLeft: 8,
-          minHeight: 42
-        }}
-      >
-        {typing ? (
-          <View style={{ flexDirection: 'row' }}>
-            <MessageTypingAnimation offset={0} />
-            <MessageTypingAnimation offset={1} />
-            <MessageTypingAnimation offset={2} />
-          </View>
-        ) : (
+          paddingVertical: 4
+        }}>
+          <MessageTypingAnimation offset={0} />
+          <MessageTypingAnimation offset={1} />
+          <MessageTypingAnimation offset={2} />
+        </View>
+      ) : (
+        <View
+          style={{
+            backgroundColor: '#d0d2db',
+            borderTopRightRadius: 15,
+            borderTopLeftRadius: 15,
+            borderBottomRightRadius: 15,
+            maxWidth: '75%',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            justifyContent: 'center',
+            marginLeft: 8,
+            minHeight: 42
+          }}
+        >
           <Text
             style={{
               color: '#202020',
@@ -194,9 +199,10 @@ function MessageBubbleFriend({ content = '', friend, typing = false }: MessageBu
           >
             {content}
           </Text>
-        )}
 
-      </View>
+
+        </View>
+      )}
       <View style={{ flex: 1 }} />
     </View >
   )
@@ -206,32 +212,32 @@ function MessageBubble({ index, message, user, friend }: MessageBubbleProps) {
 
   const [showTyping, setShowTyping] = useState(false)
 
-	const messagesTyping = useGlobal(state => state.messagesTyping)
+  const messagesTyping = useGlobal(state => state.messagesTyping)
 
-	useEffect(() => {
-		if (index !== 0) return
-		if (messagesTyping === null) {
-			setShowTyping(false)
-			return
-		}
-		setShowTyping(true)
-		const check = setInterval(() => {
-			const now = new Date()
-			const ms = now - messagesTyping
-			if (ms > 2000) {
-				setShowTyping(false)
-			}
-		}, 1000)
-		return () => clearInterval(check)
-	}, [messagesTyping])
+  useEffect(() => {
+    if (index !== 0) return
+    if (messagesTyping === null) {
+      setShowTyping(false)
+      return
+    }
+    setShowTyping(true)
+    const check = setInterval(() => {
+      const now = new Date()
+      const ms = now - messagesTyping
+      if (ms > 2000) {
+        setShowTyping(false)
+      }
+    }, 1000)
+    return () => clearInterval(check)
+  }, [messagesTyping])
 
 
-	if (index === 0) {
-		if (showTyping) {
-			return <MessageBubbleFriend content={message.content} friend={friend} typing={true} />
-		}
-		return
-	}
+  if (index === 0) {
+    if (showTyping) {
+      return <MessageBubbleFriend content={message.content} friend={friend} typing={true} />
+    }
+    return
+  }
 
   return user.account.id === message.accountId ? (
     <MessageBubbleMe
@@ -292,7 +298,9 @@ function MessageInput({ message, setMessage, onSend }: MessageInputProps) {
 const MessagesScreen = ({ navigation, route }: MessagesProps) => {
   const [message, setMessage] = useState('')
 
+  const getMessagesList = useGlobal(state => state.getMessagesList)
   const messagesList = useGlobal(state => state.messagesList)
+  const messagesNext = useGlobal(state => state.messagesNext)
   const getMessages = useGlobal(state => state.getMessagesList)
   const messageSend = useGlobal(state => state.messageSend)
   const typingMessage = useGlobal(state => state.typingMessage)
@@ -341,6 +349,13 @@ const MessagesScreen = ({ navigation, route }: MessagesProps) => {
           data={[{ id: -1 }, ...messagesList as any[]]}
           inverted={true}
           keyExtractor={(item) => item.id}
+          onStartReachedThreshold={0.1}
+          onStartReached={() => {
+            console.log('onReached: ', messagesNext)
+            if(messagesNext) {
+              getMessagesList(connectionId, messagesNext)
+            }
+          }}
           renderItem={({ item, index }) => (
             <MessageBubble index={index} message={item} friend={friend} user={user} />
           )}

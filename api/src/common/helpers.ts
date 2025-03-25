@@ -4,7 +4,6 @@ import { CloudflareBindings } from "./cloudflare";
 
 export const MAX_MEDIA_SIZE = 10 * 1024 * 1024; // 10MB
 
-
 // Function to broadcast the message
 export async function broadcastMessage(
     env: CloudflareBindings,
@@ -29,14 +28,6 @@ export async function broadcastMessage(
         senderFriendId = participants?.senderId
         receiverFriendId = participants?.receiverId
     }
-
-    console.log("========================\n\n\n")
-
-    console.log("senderID: ", senderId)
-    console.log("sender friend id: ", senderFriendId)
-    console.log("receiver friend id: ", receiverFriendId)
-
-    console.log("\n\n\n==================================")
 
     // Get friend
     const senderFriend = await getConnection(env, message.connectionId, receiverFriendId as number)
@@ -89,8 +80,6 @@ export async function broadcastMessage(
                 friend: recieverFriend
             }
         }))
-        console.log('receiver tags')
-
     }
 
 }

@@ -369,20 +369,21 @@ export class Chat {
                 break;
 
             case DataType.MESSAGESLIST:
-                let messages
-                if (!page || page === 0) messages = await loadMessages(this.env, id, 1)
-                else messages = await loadMessages(this.env, id, page)
+                let result
+                if (!page || page === 0) result = await loadMessages(this.env, id, 1)
+                else result = await loadMessages(this.env, id, page)
+
+
+                console.log('resultt: ', result)
 
                 // console.log("messages: ", messages, "for the page: ", page)
                 ws.send(JSON.stringify({
                     source: 'messageslist',
-                    data: messages
+                    data: result
                 }))
                 break;
 
             case DataType.TYPINGMESSAGE:
-                // console.log(senderAccountId , " is typing ");
-                // console.log("and ", id, " will be notified when ", senderAccountId, "is typing") 
                 recieverSockets = this.state.getWebSockets(`${id}`);
                 for(const socket of recieverSockets) {
                     socket.send(JSON.stringify({

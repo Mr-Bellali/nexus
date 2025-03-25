@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { CloudflareBindings } from './cloudflare';
 import { getPrismaClient } from './prisma';
 
-const PAGE_SIZE = 1000
+const PAGE_SIZE = 15
 
 export async function searchUsers(env: CloudflareBindings, query: string, id: number) {
     const prisma = getPrismaClient(env);
@@ -280,12 +280,13 @@ export async function getConnectionParticipants(env: CloudflareBindings, id: str
 
 export async function loadMessages(env: CloudflareBindings, id: string, page = 1) {
     const prisma = getPrismaClient(env);
-    const messages = await prisma.connection.findFirst({
+    const messagesData = await prisma.connection.findFirst({
         where: {
             id
         },
 
         select: {
+            id: true,
             messages: {
                 orderBy: { createdAt: "desc" },
                 skip: (page - 1) * PAGE_SIZE,
@@ -295,7 +296,23 @@ export async function loadMessages(env: CloudflareBindings, id: string, page = 1
         }
     })
 
-    return messages
+    const totalMessages = await prisma.message.count({
+        where:{
+            connectionId: messagesData?.id
+        }
+    })
+
+    const sentMessages = (page - 1) * PAGE_SIZE + (messagesData?.messages.length as number)
+
+    console.log("sent messages: ", sentMessages)
+    console.log("total messages: ", totalMessages)
+    console.log("remaining messages: ", totalMessages - sentMessages)
+    const next = totalMessages > (page+1) * PAGE_SIZE ? page + 1 : null
+    console.log("next: ", next)
+    return {
+        messagesData,
+        next
+    }
 }
 
 export async function getConnection(env: CloudflareBindings, id: string, friendId: number) {

@@ -19,6 +19,7 @@ export interface GlobalState {
   messagesList: any[] | null;
   messagesId: number | null;
   messagesTyping: any;
+  messagesNext: any;
   init: () => void;
   login: (user: any, credentials: any, token: any) => void;
   logout: () => void;

@@ -118,8 +118,10 @@ function responseNewFriend(set: Function, get: Function, friend: Object) {
 }
 
 function responseMessagesList(set: Function, get: Function, data: any) {
+  console.log("data.messagesData.next: ", data.next)
   set((state) => ({
-    messagesList: [...get().messagesList, ...data.messages],
+    messagesList: [...get().messagesList, ...data.messagesData.messages],
+    messagesNext: data.next,
     // messagesId: data.friend.id
   }))
 }
@@ -287,8 +289,8 @@ const useGlobal = create<GlobalState>((set, get) => ({
     }
 
     socket.onerror = (event: any) => {
-      const parsed = JSON.parse(event.error)
-      console.error('socket.onError', parsed)
+      // const parsed = JSON.parse(event.error)
+      console.error('socket.onError')
     }
 
     socket.onclose = () => {
@@ -362,6 +364,7 @@ const useGlobal = create<GlobalState>((set, get) => ({
   messagesList: [],
   messagesId: null,
   messagesTyping: null,
+  messagesNext: null,
 
   getMessagesList: (id, page = 0) => {
     if (page === 0) {
@@ -369,6 +372,7 @@ const useGlobal = create<GlobalState>((set, get) => ({
         messagesList: [],
         messagesId: null,
         messagesTyping: null,
+        messagesNext: null,
       }))
     }
     const socket = get().socket
