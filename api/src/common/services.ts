@@ -280,11 +280,13 @@ export async function getConnectionParticipants(env: CloudflareBindings, id: str
 
 export async function loadMessages(env: CloudflareBindings, id: string, page = 1) {
     const prisma = getPrismaClient(env);
+    
+    console.log(`Loading messages for page ${page}...`);
+    
     const messagesData = await prisma.connection.findFirst({
         where: {
             id
         },
-
         select: {
             id: true,
             messages: {
@@ -292,7 +294,6 @@ export async function loadMessages(env: CloudflareBindings, id: string, page = 1
                 skip: (page - 1) * PAGE_SIZE,
                 take: PAGE_SIZE,
             },
-
         }
     })
 
@@ -302,18 +303,19 @@ export async function loadMessages(env: CloudflareBindings, id: string, page = 1
         }
     })
 
-    const sentMessages = (page - 1) * PAGE_SIZE + (messagesData?.messages.length as number)
-
-    console.log("sent messages: ", sentMessages)
-    console.log("total messages: ", totalMessages)
-    console.log("remaining messages: ", totalMessages - sentMessages)
-    const next = totalMessages > (page+1) * PAGE_SIZE ? page + 1 : null
-    console.log("next: ", next)
+    console.log(`Total messages: ${totalMessages}, Current page: ${page}`);
+    
+    const next = ( totalMessages > page * PAGE_SIZE ) ? page + 1 : null
+    
+    console.log(`Next page: ${next}`);
+    
     return {
         messagesData,
         next
     }
 }
+
+
 
 export async function getConnection(env: CloudflareBindings, id: string, friendId: number) {
     const prisma = getPrismaClient(env);

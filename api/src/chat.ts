@@ -374,7 +374,13 @@ export class Chat {
                 else result = await loadMessages(this.env, id, page)
 
 
-                console.log('resultt: ', result)
+                // console.log('============= messages =================');
+                // console.log(result.messagesData?.messages);
+                // console.log('====================================');
+
+                // console.log('============== page================');
+                // console.log("current: ", page, "next:  ", result.next);
+                // console.log('====================================');
 
                 // console.log("messages: ", messages, "for the page: ", page)
                 ws.send(JSON.stringify({
