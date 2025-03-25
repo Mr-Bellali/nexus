@@ -68,15 +68,23 @@ export class Chat {
             let receiverSockets
             let senderSockets
             if (senderId === participants?.senderId) {
-                senderSockets = this.state.getWebSockets(`${senderId}`);
+                senderSockets = this.state.getWebSockets(`${participants?.senderId}`);
                 receiverSockets = this.state.getWebSockets(`${participants.receiverId}`)
             }
             if (senderId === participants?.receiverId) {
-                senderSockets = this.state.getWebSockets(`${senderId}`);
+                senderSockets = this.state.getWebSockets(`${participants?.receiverId}`);
                 receiverSockets = this.state.getWebSockets(`${participants?.senderId}`)
             }
-            // console.log('sender: ', senderSockets);
-            // console.log('receiver: ', receiverSockets)
+           
+            for (const socket of senderSockets as WebSocket[]) {
+                const tags = this.state.getTags(socket)
+                console.log("sender tags: ", tags)
+            }
+
+            for (const socket of receiverSockets as WebSocket[]) {
+                const tags = this.state.getTags(socket)
+                console.log("receiver tags: ", tags)
+            }
 
             // broadcast the message
             await broadcastMessage(
@@ -331,7 +339,7 @@ export class Chat {
 
             case DataType.FRIENDS:
                 const friends = await getFriends(this.env, senderAccountId);
-                console.log("friends: ", friends)
+                // console.log("friends: ", friends)
                 ws.send(JSON.stringify({
                     source: 'friends',
                     data: friends
@@ -373,8 +381,8 @@ export class Chat {
                 break;
 
             case DataType.TYPINGMESSAGE:
-                console.log(senderAccountId , " is typing ");
-                console.log("and ", id, " will be notified when ", senderAccountId, "is typing") 
+                // console.log(senderAccountId , " is typing ");
+                // console.log("and ", id, " will be notified when ", senderAccountId, "is typing") 
                 recieverSockets = this.state.getWebSockets(`${id}`);
                 for(const socket of recieverSockets) {
                     socket.send(JSON.stringify({

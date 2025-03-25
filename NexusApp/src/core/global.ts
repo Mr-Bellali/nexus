@@ -13,7 +13,6 @@ function responseRequestConnect(set: Function, get: Function, connection: any) {
 
   // If the one who's sending the request
   // Update the search list row
-
   if (user.account.id === connection.sender.id) {
     const searchList = [...get().searchList]
     const searchIndex = searchList.findIndex(
@@ -128,6 +127,11 @@ function responseMessagesList(set: Function, get: Function, data: any) {
 function responseMessage(set: Function, get: Function, data: any) {
   const friendId = data.friend.friend.id
   const friendsList = [...get().friendsList]
+
+  console.log("data: ", data)
+  console.log("friendId: ", friendId)
+  console.log("friends list: ", friendsList)
+
   const friendIndex = friendsList.findIndex(
     item => item.friend.id === friendId
   )
@@ -136,35 +140,38 @@ function responseMessage(set: Function, get: Function, data: any) {
   if (friendIndex >= 0) {
     const item = friendsList[friendIndex]
     console.log("item: ", item)
-    item.preview = data.friend.preview
-    item.updatedAt = data.friend.updatedAt
+    item.preview = data.preview
+    item.updatedAt = data.updatedAt
     friendsList.splice(friendIndex, 1)
     friendsList.unshift(item)
-    console.log("unshift", friendsList.unshift(item))
     set((state) => ({
       friendsList
     }))
     console.log("new friendlist: ", friendsList)
   }
-  if (friendId !== get().messagesId) {
-    return
-  }
+  // if (friendId !== get().messagesId) {
+  //   return
+  // }
 
+  console.log("old messages list: ", get().messagesList)
 
   const messagesList = [data.message, ...get().messagesList]
+
+  console.log("new messages list: ", messagesList)
+
   set((state) => ({
-    messagesList
+    messagesList,
+    messagesTyping: null
   }))
+
+  console.log("is messages list is updated?? ", get().messagesList)
 }
 
 function responseTypingMessage(set: Function, get: Function, data: any){
-  console.log("reciever id: ", data.senderId)
-  console.log("my id: ", get().user.account.id)
   if(data.receiverId === get().messagesId) return
   set((state) => ({
     messagesTyping: new Date()
   }))
-  console.log("inside global: ", get().messagesTyping)
 }
 
 const useGlobal = create<GlobalState>((set, get) => ({

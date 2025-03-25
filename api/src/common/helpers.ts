@@ -22,17 +22,28 @@ export async function broadcastMessage(
     let receiverFriendId
     let senderFriendId
     if (senderId === participants?.senderId) {
-        senderFriendId = senderId
-        receiverFriendId = participants?.receiverId
+        senderFriendId = participants?.receiverId
+        receiverFriendId = participants?.senderId
     }
     if (senderId === participants?.receiverId) {
-        senderFriendId = participants?.receiverId
-        receiverFriendId = senderId
+        senderFriendId = participants?.senderId
+        receiverFriendId = participants?.receiverId
     }
+
+    console.log("========================\n\n\n")
+
+    console.log("senderID: ", senderId)
+    console.log("sender friend id: ", senderFriendId)
+    console.log("receiver friend id: ", receiverFriendId)
+
+    console.log("\n\n\n==================================")
 
     // Get friend
     const senderFriend = await getConnection(env, message.connectionId, receiverFriendId as number)
     const recieverFriend = await getConnection(env, message.connectionId, senderFriendId as number)
+
+    console.log("sender friend: ", senderFriend)
+    console.log("receiver friend: ", recieverFriend)
 
     // Loop into all sender sockets (if he's connected from more than 1 device)
     for (const senderSocket of senderSockets) {

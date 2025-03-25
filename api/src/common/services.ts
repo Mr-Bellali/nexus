@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { CloudflareBindings } from './cloudflare';
 import { getPrismaClient } from './prisma';
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 1000
 
 export async function searchUsers(env: CloudflareBindings, query: string, id: number) {
     const prisma = getPrismaClient(env);

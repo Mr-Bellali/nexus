@@ -338,8 +338,7 @@ const MessagesScreen = ({ navigation, route }: MessagesProps) => {
           style={{
             marginBottom: 26
           }}
-          data= {messagesList}
-          // {[{ id: -1 }, ...messagesList as any[]]}
+          data={[{ id: -1 }, ...messagesList as any[]]}
           inverted={true}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
