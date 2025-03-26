@@ -11,6 +11,7 @@ import SignUpScreen from './src/screens/SignUp';
 import HomeScreen from './src/screens/Home';
 import SearchScreen from './src/screens/Search';
 import MessagesScreen from './src/screens/Messages';
+import CameraScreen from './src/screens/Camera';
 import useGlobal from './src/core/global';
 
 const LightTheme = {
@@ -50,6 +51,7 @@ function App() {
             <Stack.Screen name='Home' component={HomeScreen} />
             <Stack.Screen name='Search' component={SearchScreen} />
             <Stack.Screen name='Messages' component={MessagesScreen} />
+            <Stack.Screen name='Camera' component={CameraScreen} /> 
           </>
         )}
       </Stack.Navigator> 

@@ -20,6 +20,7 @@ export interface GlobalState {
   messagesId: number | null;
   messagesTyping: any;
   messagesNext: any;
+  media: any;
   init: () => void;
   login: (user: any, credentials: any, token: any) => void;
   logout: () => void;
@@ -32,6 +33,7 @@ export interface GlobalState {
   messageSend: (id: string, message: string) => void
   getMessagesList: (id: string, page? :number) => void
   typingMessage: (id: number) => void;
+  selectMedia: (media: any) => void;
 }
 export type Credentials = {
   username: string;

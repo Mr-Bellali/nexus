@@ -9,10 +9,6 @@ import Thumbnail from '../common/Thumbnail'
 function ProfileImage() {
   const uploadThumbnail = useGlobal(state => state.uploadThumbnail)
   const user = useGlobal(state => state.user)
-
-
-  
-
   return (
     <TouchableOpacity
       style={{ marginBottom: 20 }}

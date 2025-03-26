@@ -365,6 +365,7 @@ const useGlobal = create<GlobalState>((set, get) => ({
   messagesId: null,
   messagesTyping: null,
   messagesNext: null,
+  media: "",
 
   getMessagesList: (id, page = 0) => {
     if (page === 0) {
@@ -396,6 +397,11 @@ const useGlobal = create<GlobalState>((set, get) => ({
     socket?.send(JSON.stringify({
       source: 'typing-message',
       id,
+    }))
+  },
+  selectMedia: (media) => {
+    set((state) => ({
+      media
     }))
   },
 
